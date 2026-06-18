@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposal — Predicting Citation Impact of Scientific Papers</title>
+  <meta name="description" content="CS 7641 Summer 2026 project proposal: predicting the citation impact of scientific papers." />
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+</head>
+<body>
+
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <span class="brand">Citation<span>Impact</span></span>
+      <div class="links">
+        <a href="../../index.html">Home</a>
+        <a href="../proposal/" class="active">Proposal</a>
+        <a href="../midterm/">Midterm</a>
+        <a href="../final/">Final</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <h1>Predicting Citation Impact of Scientific Papers</h1>
+      <p class="subtitle">A Regression Approach with Supervised and Unsupervised Learning</p>
+      <p class="meta">CS 7641 Machine Learning &middot; Summer 2026 &middot; Project Proposal</p>
+    </div>
+  </header>
+
+  <main>
+
+    <p class="crumb"><a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Proposal</p>
+
+    <div class="doc-subnav">
+      <a href="../proposal/" class="active">Proposal</a>
+      <a href="../midterm/">Midterm</a>
+      <a href="../final/">Final</a>
+    </div>
+
+    <!-- Title / team block -->
+    <div class="card">
+      <p style="margin:0 0 6px"><strong>Team Members:</strong> Shih, Cheng-Jhih; Kim, Jeonghwan; Park, Christopher Y.; Pyo, Jaechan; Zhang, Haoming</p>
+      <p style="margin:0">
+        <strong>Assigned Mentor:</strong> Alexandra Wu
+        &nbsp;&middot;&nbsp; <strong>Submission Date:</strong> 06/16/2026
+        &nbsp;&middot;&nbsp; <strong>"Outstanding Project" Award opt-in:</strong> Yes
+      </p>
+    </div>
+
+    <!-- 1. Introduction & Background -->
+    <section id="introduction">
+      <h2 class="section-title"><span class="section-num">1.</span> Introduction &amp; Background</h2>
+      <p>
+        The number of citations a paper accrues is a widely used &mdash; if imperfect &mdash; proxy for
+        scientific influence [1]. Citation dynamics are extremely skewed: in computer science, the most-cited
+        7% of papers collect over half of all citations while roughly 21% go uncited (Gini &asymp; 0.73,
+        Fig. 1) [7] &mdash; a concentration that has intensified as AI publication volume has surged [2], [6].
+        With thousands of AI papers posted monthly, it is hard to tell early which work will matter; a model
+        that forecasts impact at publication could help researchers, reviewers, and libraries surface promising
+        papers before citations accumulate, and reveal which characteristics drive attention. Text alone is a
+        weak predictor &mdash; the strongest text-based models leave most of the variance unexplained [8]
+        &mdash; while bibliometric and metadata signals available near publication add substantial predictive
+        power [1]. We study citation prediction for AI/ML papers &mdash; a fast-moving field with a large, openly
+        catalogued literature &mdash; and use feature-importance analysis to learn <em>which</em> signals actually
+        drive predicted impact, rather than assuming them in advance.
+      </p>
+
+      <h3>Dataset</h3>
+      <p>
+        We assemble the dataset from open sources requiring <strong>no API keys</strong>: a HuggingFace arXiv
+        corpus (<code>CShorten/ML-ArXiv-Papers</code>) provides titles, abstracts, authors, and dates, which we
+        enrich with citation counts and affiliations from <strong>OpenAlex</strong> [3] (key-free REST API,
+        batched by arXiv ID/DOI). We restrict to AI/ML categories (cs.LG, cs.CL, cs.CV) and sample ~50,000
+        papers from 2018&ndash;2022 so citations have had time to mature.
+      </p>
+      <p>
+        <strong>Data (all key-free):</strong>
+        <a href="https://huggingface.co/datasets/CShorten/ML-ArXiv-Papers" target="_blank" rel="noopener">huggingface.co/datasets/CShorten/ML-ArXiv-Papers</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://openalex.org" target="_blank" rel="noopener">openalex.org</a>
+      </p>
+
+      <figure>
+        <img src="../../assets/img/citation_skew.png" alt="Lorenz curve of the computer-science citation distribution" />
+        <figcaption>
+          <strong>Figure 1.</strong> Lorenz curve of the computer-science citation distribution (illustrative,
+          after Franceschet [7]): ~7% of papers collect ~50% of citations and ~21% are uncited (Gini &asymp; 0.73),
+          motivating a learned model and a log-transformed target.
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- 2. Problem Definition -->
+    <section id="problem">
+      <h2 class="section-title"><span class="section-num">2.</span> Problem Definition</h2>
+      <p>
+        <strong>Problem.</strong> Given features describing a scientific paper at publication time (title,
+        abstract, venue, author count, reference count, field, year), predict its fixed-window citation count
+        &mdash; a regression task. We will also study a binary framing: whether a paper becomes "highly cited"
+        (top decile of fixed-window citations within its field/year).
+      </p>
+      <p>
+        <strong>Motivation.</strong> Reliable early estimates of impact could help readers, libraries, and
+        reviewers triage a fast-growing literature, and analyzing the trained model reveals which paper
+        characteristics most influence eventual citations. Modeling impact also exposes the biases baked into
+        citation counts, which we treat as an object of study rather than ground truth.
+        <em>Time permitting (stretch goal):</em> we will extend the analysis to recent papers, characterizing
+        how predicted impact tracks emerging topics, and test whether these factors generalize beyond AI/ML
+        literature.
+      </p>
+    </section>
+
+    <!-- 3. Methods -->
+    <section id="methods">
+      <h2 class="section-title"><span class="section-num">3.</span> Methods</h2>
+
+      <h3>Data Preprocessing</h3>
+      <p>We will:</p>
+      <ol>
+        <li>build text features from the title and abstract with TF-IDF (<code>TfidfVectorizer</code>) and compress them via Truncated SVD (<code>TruncatedSVD</code>);</li>
+        <li>engineer and scale metadata features &mdash; author count, reference count, title/abstract length, field, publication year, and frequency-encoded venue &mdash; with <code>StandardScaler</code>;</li>
+        <li><em>log-transform the heavily skewed target</em>, <code>y = log(1 + citations)</code>, so models are not dominated by a few outliers; and</li>
+        <li>use a <em>temporal train/test split</em> (train on earlier years, test on later) to prevent leakage and mimic real forecasting.</li>
+      </ol>
+      <p>All pipelines use scikit-learn [5].</p>
+
+      <h3>Unsupervised Learning</h3>
+      <p>
+        On the assembled feature vectors we run (i) <strong>K-Means clustering</strong> to surface "impact
+        archetypes" and inspect how fixed-window citation outcomes differ across clusters, with the silhouette
+        score selecting <em>k</em>, and (ii) <strong>UMAP / t-SNE</strong> to visualize the resulting clusters
+        and citation patterns in two dimensions. This both characterizes the data and informs feature
+        engineering for the supervised stage.
+      </p>
+
+      <h3>Supervised Learning</h3>
+      <p>
+        We train three regressors of increasing capacity &mdash; <strong>Ridge Regression</strong> (interpretable
+        baseline), <strong>Random Forest</strong>, and <strong>gradient-boosted trees (XGBoost)</strong> [4]
+        &mdash; to predict fixed-window log-citations, which are compared head-to-head. We use feature-importance
+        and SHAP analysis and feature-ablation experiments to identify which signals most influence predictions;
+        strongly predictive metadata features will be examined further in follow-up analyses. The same features
+        feed a <strong>Logistic Regression / gradient-boosting classifier</strong> for the binary "highly cited"
+        framing.
+      </p>
+    </section>
+
+    <!-- 4. Results -->
+    <section id="results">
+      <h2 class="section-title"><span class="section-num">4.</span> (Potential) Results &amp; Discussion</h2>
+      <p>
+        We will report <strong>RMSE, MAE, and R&sup2;</strong> on log-citations, plus <strong>Spearman rank
+        correlation</strong>. Because our goal is to surface promising papers, we also report ranking metrics
+        including <strong>Precision@10%, Recall@10%, and NDCG@10%</strong>. The binary framing adds ROC-AUC,
+        PR-AUC and F1, and clustering uses the silhouette score. Beyond accuracy, SHAP and feature-ablation
+        analyses are themselves results: they show which paper characteristics most shape predicted impact and
+        where the model's predictability comes from.
+      </p>
+
+      <h3>Ethics &amp; Sustainability</h3>
+      <p>
+        Citation counts contain known biases related to venue prestige, field size, and demographic effects. We
+        therefore interpret predictions descriptively rather than as measures of scientific merit. Because our
+        analysis is observational, reported feature effects should be viewed as associations rather than causal
+        relationships. The models train in minutes on CPU, keeping computational cost and energy use low.
+      </p>
+    </section>
+
+    <!-- 5. References -->
+    <section id="references">
+      <h2 class="section-title"><span class="section-num">5.</span> References</h2>
+      <ol class="refs">
+        <li>R. Yan, J. Tang, X. Liu, D. Shan, and X. Li, "Citation Count Prediction: Learning to Estimate Future Citations for Literature," in <em>Proc. 20th ACM Int. Conf. on Information and Knowledge Management (CIKM)</em>, 2011, pp. 1247&ndash;1252.</li>
+        <li>D. Wang, C. Song, and A.-L. Barab&aacute;si, "Quantifying Long-Term Scientific Impact," <em>Science</em>, vol. 342, no. 6154, pp. 127&ndash;132, 2013.</li>
+        <li>J. Priem, H. Piwowar, and R. Orr, "OpenAlex: A Fully-Open Index of Scholarly Works, Authors, Venues, Institutions, and Concepts," <em>arXiv preprint arXiv:2205.01833</em>, 2022.</li>
+        <li>T. Chen and C. Guestrin, "XGBoost: A Scalable Tree Boosting System," in <em>Proc. 22nd ACM SIGKDD Int. Conf. Knowledge Discovery and Data Mining</em>, 2016, pp. 785&ndash;794.</li>
+        <li>F. Pedregosa et al., "Scikit-learn: Machine Learning in Python," <em>J. Machine Learning Research</em>, vol. 12, pp. 2825&ndash;2830, 2011.</li>
+        <li>S. Fortunato et al., "Science of Science," <em>Science</em>, vol. 359, no. 6379, eaao0185, 2018.</li>
+        <li>M. Franceschet, "The Skewness of Computer Science," <em>Information Processing &amp; Management</em>, vol. 47, no. 1, pp. 117&ndash;124, 2011.</li>
+        <li>M. M. van Dongen, G. Maillette de Buy Wenniger, and L. Schomaker, "SChuBERT: Scholarly Document Chunks with BERT-encoding Boost Citation Count Prediction," in <em>Proc. First Workshop on Scholarly Document Processing</em>, 2020, pp. 148&ndash;157.</li>
+      </ol>
+    </section>
+
+    <!-- Gantt chart -->
+    <section id="gantt">
+      <h2 class="section-title">Gantt Chart</h2>
+      <p class="wordnote">Planned responsibilities across the 8 project weeks (Summer 2026). &#9670; = milestone.</p>
+      <div class="gantt">
+        <table class="gantt-table">
+          <thead>
+            <tr>
+              <th class="task-col">Task (Lead)</th>
+              <th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>W6</th><th>W7</th><th>W8</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="task-name">Project scoping &amp; proposal (M1)</td>
+              <td><span class="gbar"></span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">&#9670; Proposal due</td>
+              <td><span class="gmile"></span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Data collection (OpenAlex) &amp; cleaning (M2)</td>
+              <td><span class="gbar"></span></td><td><span class="gbar"></span></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Feature engineering + log-target + EDA (M2/M3)</td>
+              <td></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Unsupervised: impact-archetype clustering (M3)</td>
+              <td></td><td></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Supervised: Ridge / RF / XGBoost regression (M4)</td>
+              <td></td><td></td><td></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Midterm report (M1)</td>
+              <td></td><td></td><td></td><td></td><td><span class="gbar"></span></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">&#9670; Midterm due</td>
+              <td></td><td></td><td></td><td></td><td><span class="gmile"></span></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Tuning &amp; evaluation (RMSE / R&sup2; / Spearman) (M5)</td>
+              <td></td><td></td><td></td><td></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Stretch: recent-papers trend analysis (M3)</td>
+              <td></td><td></td><td></td><td></td><td></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">Final report + video + repo (M5)</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td><span class="gbar"></span></td><td><span class="gbar"></span></td>
+            </tr>
+            <tr>
+              <td class="task-name">&#9670; Final due</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td><span class="gmile"></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="gantt-legend">
+        <strong>Leads:</strong> M1 &mdash; proposal &amp; midterm report &middot; M2 &mdash; data &amp; features
+        &middot; M3 &mdash; unsupervised / EDA &middot; M4 &mdash; regression models
+        &middot; M5 &mdash; evaluation, final report, video &amp; repo.
+      </p>
+    </section>
+
+    <!-- Contribution table -->
+    <section id="contributions">
+      <h2 class="section-title">Contribution Table</h2>
+      <table class="data">
+        <thead>
+          <tr><th style="width:24%">Name</th><th>Proposal Contributions</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Shih, Cheng-Jhih</td><td>Problem definition, dataset selection, ethics &amp; sustainability, references, proposal writing, review</td></tr>
+          <tr><td>Kim, Jeonghwan</td><td>Gantt chart, methods, proposal writing, review</td></tr>
+          <tr><td>Park, Christopher Y.</td><td>Presentation, video creation, recording, review</td></tr>
+          <tr><td>Pyo, Jaechan</td><td>Introduction, background, literature review, proposal writing, review</td></tr>
+          <tr><td>Zhang, Haoming</td><td>Methods, references, potential results, discussion, proposal writing, review</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <footer>
+    CS 7641 Machine Learning &middot; Summer 2026 &middot; Project Proposal
+  </footer>
+
+</body>
+</html>
