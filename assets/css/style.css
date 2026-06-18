@@ -237,7 +237,7 @@ figcaption { font-size: 0.86rem; color: var(--muted); margin-top: 8px; }
 table.gantt-table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 1040px;
+  min-width: 880px;
   font-size: 0.85rem;
 }
 table.gantt-table th, table.gantt-table td {
