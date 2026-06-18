@@ -70,8 +70,8 @@ Do this by **spawning a sub-agent** (Agent tool, `subagent_type: general-purpose
 - [ ] **"Outstanding Project" award opt-in** status stated
 
 ### Known TODOs to flag until resolved
-- Add the real **GT GitHub Enterprise repository** link (placeholder `#` in `index.html`).
-- Add the real **YouTube Unlisted video** link (placeholder `#` in `index.html`).
+- Replace the **Code** "Coming soon" with the real GT GitHub Enterprise repository link (`index.html`, Project Links).
+- Replace the **Video** "Coming soon" with the real 3-minute YouTube Unlisted link (`index.html`, Project Links).
 - Re-confirm the proposal stays **under 800 words** after any content edit.
 
 ## Local preview
