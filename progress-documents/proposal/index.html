@@ -191,63 +191,153 @@
     <!-- Gantt chart -->
     <section id="gantt">
       <h2 class="section-title">Gantt Chart</h2>
-      <p class="wordnote">Planned responsibilities across the 8 project weeks (Summer 2026). &#9670; = milestone.</p>
+      <p class="wordnote">
+        Planned responsibilities on the actual Summer&nbsp;2026 course calendar (week = Monday start date).
+        The <strong>Proposal preparation</strong> band mirrors the Contribution Table below; the
+        <strong>Project execution</strong> band covers the work through the final report. A bar split into
+        colored segments means the task is shared by several members. &#9670; = milestone.
+      </p>
       <div class="gantt">
         <table class="gantt-table">
           <thead>
             <tr>
-              <th class="task-col">Task (Lead)</th>
-              <th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th><th>W6</th><th>W7</th><th>W8</th>
+              <th class="task-col">Task</th>
+              <th>W2<small>5/25</small></th>
+              <th>W3<small>6/1</small></th>
+              <th>W4<small>6/8</small></th>
+              <th>W5<small>6/15</small></th>
+              <th>W6<small>6/22</small></th>
+              <th>W7<small>6/29</small></th>
+              <th>W8<small>7/6</small></th>
+              <th>W9<small>7/13</small></th>
+              <th>W10<small>7/20</small></th>
+              <th>W11<small>7/27</small></th>
             </tr>
           </thead>
           <tbody>
+
+            <!-- ===== Proposal preparation (mirrors Contribution Table) ===== -->
+            <tr class="gantt-phase"><td colspan="11">Proposal preparation &mdash; due 6/19 (Week&nbsp;5)</td></tr>
+
             <tr>
-              <td class="task-name"><span class="owner p-jp">JP</span> Project scoping &amp; proposal</td>
-              <td><span class="gbar labeled p-jp">JP</span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td class="task-name"><span class="owner p-all">ALL</span> Team formation &amp; project scoping</td>
+              <td><span class="gbar"><span class="seg p-all">ALL</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
             <tr>
-              <td class="task-name">&#9670; Proposal due</td>
-              <td><span class="gmile"></span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td class="task-name"><span class="owner p-jp">JP</span> Introduction, background &amp; literature review</td>
+              <td colspan="2"><span class="gbar"><span class="seg p-jp">JP</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
             </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cs">CS</span> Problem definition &amp; dataset selection</td>
+              <td colspan="2"><span class="gbar"><span class="seg p-cs">CS</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-jk">JK</span><span class="owner p-hz">HZ</span> Methods</td>
+              <td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-jk">JK</span><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-hz">HZ</span> (Potential) results &amp; discussion</td>
+              <td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cs">CS</span> Ethics &amp; sustainability</td>
+              <td></td>
+              <td><span class="gbar"><span class="seg p-cs">CS</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cs">CS</span><span class="owner p-hz">HZ</span> References (IEEE)</td>
+              <td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-cs">CS</span><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-jk">JK</span> Gantt chart</td>
+              <td></td><td></td>
+              <td><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cp">CP</span> Presentation, video creation &amp; recording</td>
+              <td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-cp">CP</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-all">ALL</span> Proposal writing &amp; peer review</td>
+              <td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-all">ALL</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name">&#9670; Proposal due (6/19)</td>
+              <td></td><td></td><td><span class="gmile"></span></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+
+            <!-- ===== Project execution ===== -->
+            <tr class="gantt-phase"><td colspan="11">Project execution</td></tr>
+
             <tr>
               <td class="task-name"><span class="owner p-cs">CS</span> Data collection (OpenAlex) &amp; cleaning</td>
-              <td><span class="gbar labeled p-cs">CS</span></td><td><span class="gbar p-cs"></span></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td></td><td></td><td></td><td></td>
+              <td><span class="gbar"><span class="seg p-cs">CS</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td>
             </tr>
             <tr>
               <td class="task-name"><span class="owner p-cs">CS</span><span class="owner p-jk">JK</span> Feature engineering + log-target + EDA</td>
-              <td></td><td><span class="gbar labeled p-cs">CS</span></td><td><span class="gbar labeled p-jk">JK</span></td><td></td><td></td><td></td><td></td><td></td>
+              <td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-cs">CS</span><span class="seg p-jk">JK</span></span></td>
+              <td></td><td></td><td></td><td></td>
             </tr>
             <tr>
               <td class="task-name"><span class="owner p-jk">JK</span> Unsupervised: impact-archetype clustering</td>
-              <td></td><td></td><td><span class="gbar labeled p-jk">JK</span></td><td><span class="gbar p-jk"></span></td><td></td><td></td><td></td><td></td>
+              <td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+              <td></td><td></td><td></td>
             </tr>
             <tr>
               <td class="task-name"><span class="owner p-hz">HZ</span> Supervised: Ridge / RF / XGBoost regression</td>
-              <td></td><td></td><td></td><td><span class="gbar labeled p-hz">HZ</span></td><td><span class="gbar p-hz"></span></td><td></td><td></td><td></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td>
             </tr>
             <tr>
-              <td class="task-name"><span class="owner p-jp">JP</span> Midterm report</td>
-              <td></td><td></td><td></td><td></td><td><span class="gbar labeled p-jp">JP</span></td><td></td><td></td><td></td>
+              <td class="task-name"><span class="owner p-jp">JP</span><span class="owner p-hz">HZ</span> Midterm report</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td>
+              <td><span class="gbar"><span class="seg p-jp">JP</span><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td><td></td>
             </tr>
             <tr>
-              <td class="task-name">&#9670; Midterm due</td>
-              <td></td><td></td><td></td><td></td><td><span class="gmile"></span></td><td></td><td></td><td></td>
+              <td class="task-name">&#9670; Midterm report due (7/10)</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td><span class="gmile"></span></td><td></td><td></td><td></td>
             </tr>
             <tr>
               <td class="task-name"><span class="owner p-hz">HZ</span><span class="owner p-cp">CP</span> Tuning &amp; evaluation (RMSE / R&sup2; / Spearman)</td>
-              <td></td><td></td><td></td><td></td><td><span class="gbar labeled p-hz">HZ</span></td><td><span class="gbar p-hz"></span></td><td><span class="gbar labeled p-cp">CP</span></td><td></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-hz">HZ</span><span class="seg p-cp">CP</span></span></td>
+              <td></td>
             </tr>
             <tr>
               <td class="task-name"><span class="owner p-jk">JK</span> Stretch: recent-papers trend analysis</td>
-              <td></td><td></td><td></td><td></td><td></td><td><span class="gbar labeled p-jk">JK</span></td><td><span class="gbar p-jk"></span></td><td></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+              <td></td>
             </tr>
             <tr>
-              <td class="task-name"><span class="owner p-cp">CP</span> Final report + video + repo</td>
-              <td></td><td></td><td></td><td></td><td></td><td></td><td><span class="gbar labeled p-cp">CP</span></td><td><span class="gbar p-cp"></span></td>
+              <td class="task-name"><span class="owner p-cp">CP</span><span class="owner p-jp">JP</span> Final report + video + repo</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-cp">CP</span><span class="seg p-jp">JP</span></span></td>
             </tr>
             <tr>
-              <td class="task-name">&#9670; Final due</td>
-              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td><span class="gmile"></span></td>
+              <td class="task-name">&#9670; Final report due (7/28)</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td><span class="gmile"></span></td>
             </tr>
           </tbody>
         </table>
@@ -258,6 +348,7 @@
         <span class="who"><span class="owner p-jk">JK</span> Kim, Jeonghwan</span>
         <span class="who"><span class="owner p-hz">HZ</span> Zhang, Haoming</span>
         <span class="who"><span class="owner p-cp">CP</span> Park, Christopher Y.</span>
+        <span class="who"><span class="owner p-all">ALL</span> Whole team</span>
       </div>
     </section>
 
