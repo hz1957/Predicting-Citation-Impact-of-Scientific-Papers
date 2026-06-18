@@ -272,6 +272,51 @@ table.gantt-table td.task-name { text-align: left; padding: 4px 12px; color: var
 }
 .gantt-legend { margin: 10px 2px 0; font-size: 0.84rem; color: var(--muted); }
 
+/* ---------- Gantt owner colors & initials ---------- */
+/* Per-person palette */
+.p-jp { --owner: #a8367f; }  /* Pyo, Jaechan */
+.p-cs { --owner: #0f6f6a; }  /* Shih, Cheng-Jhih */
+.p-jk { --owner: #3f6fd1; }  /* Kim, Jeonghwan */
+.p-hz { --owner: #2f8f4e; }  /* Zhang, Haoming */
+.p-cp { --owner: #c9760f; }  /* Park, Christopher Y. */
+
+/* Initial badge shown next to a task name and in the people legend */
+.owner {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 5px;
+  margin-right: 3px;
+  border-radius: 5px;
+  background: var(--owner, var(--teal));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Color a Gantt bar by its owner and show initials inside */
+.gbar[class*="p-"] { background: var(--owner); border-color: rgba(0,0,0,0.18); }
+.gbar.labeled {
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* People legend under the chart */
+.gantt-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 12px 2px 0;
+  font-size: 0.86rem;
+}
+.gantt-people .who { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+
 /* ---------- References ---------- */
 ol.refs { padding-left: 22px; }
 ol.refs li { margin-bottom: 10px; font-size: 0.92rem; }
@@ -313,6 +358,22 @@ ol.refs li { margin-bottom: 10px; font-size: 0.92rem; }
   color: var(--muted);
   font-style: italic;
 }
+
+/* ---------- Word count badge ---------- */
+.wordcount {
+  display: inline-block;
+  margin: 0 0 16px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--deep);
+  border: 1px solid var(--line);
+}
+.wordcount.ok { background: #e7f6ec; color: #1f7a3d; border-color: #bfe6cd; }
+.wordcount.over { background: #fdeaea; color: #a32525; border-color: #f3c9c9; }
+.wordcount strong { font-weight: 800; }
 
 /* ---------- Breadcrumb ---------- */
 .crumb { font-size: 0.86rem; color: var(--muted); margin-bottom: 6px; }
