@@ -40,8 +40,8 @@
     </div>
 
     <!-- Word count badge (graded sections 1-4 body; limit 800) -->
-    <p class="wordcount" id="wordcount" title="Counts the body text of sections 1–4. Headings, figure caption, references, Gantt chart, and contribution table are excluded, per the 800-word proposal limit.">
-      Proposal body: <strong>&hellip;</strong> / 800 words
+    <p class="wordcount" id="wordcount" title="Counts everything in sections 1–4, including section titles, subheadings, and the figure caption. References, Gantt chart, and contribution table are not included, per the 800-word proposal limit.">
+      Proposal text (sections 1&ndash;4, all-inclusive): <strong>&hellip;</strong> / 800 words
     </p>
 
     <!-- Title / team block -->
@@ -376,22 +376,20 @@
   </footer>
 
   <script>
-    // Live word count of the graded proposal body (sections 1-4),
-    // excluding headings and the figure caption — matching the 800-word limit.
+    // Live word count of the graded proposal sections 1-4, counting EVERYTHING
+    // (section headings, subheadings, and the figure caption included).
     (function () {
       var ids = ['introduction', 'problem', 'methods', 'results'];
       var total = 0;
       ids.forEach(function (id) {
         var sec = document.getElementById(id);
         if (!sec) return;
-        var clone = sec.cloneNode(true);
-        clone.querySelectorAll('h2, h3, figure').forEach(function (n) { n.remove(); });
-        var text = (clone.textContent || '').trim();
+        var text = (sec.textContent || '').trim();
         if (text) total += text.split(/\s+/).length;
       });
       var el = document.getElementById('wordcount');
       if (!el) return;
-      el.innerHTML = 'Proposal body: <strong>' + total + '</strong> / 800 words';
+      el.innerHTML = 'Proposal text (sections 1&ndash;4, all-inclusive): <strong>' + total + '</strong> / 800 words';
       el.classList.add(total < 800 ? 'ok' : 'over');
     })();
   </script>
