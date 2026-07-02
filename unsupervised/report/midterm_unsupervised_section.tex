@@ -1,0 +1,96 @@
+% ==========================================================================
+% Midterm report — Unsupervised Learning section (drop-in for Overleaf).
+% Copy outputs/paper/*.pdf into the Overleaf project first:
+%   fig_model_selection.pdf, fig_clusters_text.pdf, fig_citation_map.pdf
+%   (optional: fig_clusters_text_meta.pdf, same layout for the k=3 run)
+% ==========================================================================
+
+\subsection{Unsupervised Learning: Impact Archetypes}
+
+\textbf{Setup.} Following the proposal, we run K-Means on the assembled
+feature vectors of the c1 train split (24{,}691 papers, 2018--2020; the
+temporal test split is held out). Text features are TF-IDF over title +
+abstract (13{,}775 terms) compressed to 100 dimensions with Truncated SVD and
+L2-normalized (LSA); the metadata block (author/reference counts, text
+lengths, year, frequency-encoded venue, category indicators) is standardized
+and scaled to a comparable block norm. We cluster twice with the same LSA
+text features: once with the metadata block concatenated (the proposal's
+assembled vectors) and once with the text features alone. Citation outcomes
+are used only to \emph{profile} clusters, never as clustering features.
+
+\textbf{Model selection.} With text + metadata features the silhouette score
+has a clear interior maximum at $k{=}3$
+(Fig.~\ref{fig:modelsel}a, $s{=}0.100$): the three clusters match the arXiv
+category split almost exactly (99.9\% cs.CV, 100\% cs.CL, and the remaining
+cs.LG-and-other mass), and their outcomes already differ --- 14.7\% of cs.CV
+papers reach the corpus-wide top decile of 3-year citations versus 7.6\% of
+the cs.LG-and-other cluster. Using the same text (LSA) features without the
+metadata block, the silhouette instead rises slowly and monotonically with
+$k$ (Fig.~\ref{fig:modelsel}b), typical for text corpora, so we fix $k{=}8$
+--- the largest $k$ at which every cluster remains interpretable and well
+populated. This second clustering is run independently on the full corpus
+(not nested inside the $k{=}3$ clusters); its clusters mostly split the
+three category groups further but can also cut across them (e.g.\ the
+GAN/adversarial cluster spans cs.CV and cs.LG).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_model_selection.pdf}
+\caption{K-Means model selection. (a) With text (LSA) + metadata features
+the silhouette peaks at $k{=}3$, and the clusters match the cs.CV / cs.CL /
+cs.LG-and-other category split. (b) With the same text (LSA) features and no
+metadata it increases monotonically, so $k{=}8$ is chosen for
+interpretability. Both panels share the identical 100-d LSA text block; only
+the metadata block differs.}
+\label{fig:modelsel}
+\end{figure}
+
+\textbf{Eight topical archetypes with sharply different outcomes}
+(Fig.~\ref{fig:clusters}). The text-only clusters are cleanly topical ---
+3D/object detection, reinforcement learning, applied ML, optimization
+theory, deep architectures, GANs and adversarial robustness, image
+segmentation, NLP and speech (names assigned by hand from each cluster's top
+TF-IDF terms). UMAP and t-SNE agree on the same topical islands, an
+encouraging robustness check, while linear PCA shows the same coarse topic
+gradient with heavy overlap --- the nonlinear methods are what make the
+structure visible. Citation outcomes separate strongly:
+3D/object-detection papers do best (median 7 citations in 3 years; 16.0\%
+reach the corpus top decile), followed by segmentation (11.8\%) and NLP
+(11.3\%); optimization-theory papers sit lowest (median 3; 4.0\%; 16\%
+uncited). NLP is the heavy-tail cluster --- mean 47.6 versus median 6 ---
+reflecting a few transformer-era mega-hits and reinforcing the
+log-transformed target. Metadata profiles add texture: theory papers have
+markedly fewer authors ($z{=}-0.40$), vision papers more.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_clusters_text.pdf}
+\caption{K-Means ($k{=}8$) on the text (LSA) features of all 24{,}691 train
+papers. (a) PCA, (b) UMAP and (c) t-SNE colored by cluster (labels mark
+cluster medians); (d) median 3-year citations and (e) share of papers in the
+corpus-wide top decile per cluster (line = 10\% base rate).}
+\label{fig:clusters}
+\end{figure}
+
+\textbf{Impact concentrates in specific regions} (Fig.~\ref{fig:citemap}).
+Coloring the same embeddings by $\log(1+\text{citations in 3 yrs})$ shows
+dense high-citation pockets in the detection/segmentation and NLP regions
+rather than a uniform spread --- topic membership alone is informative about
+citation outcome.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_citation_map.pdf}
+\caption{The PCA (a), UMAP (b) and t-SNE (c) embeddings of
+Fig.~\ref{fig:clusters}, colored by $\log(1+\text{citations in 3 yrs})$
+(color scale clipped at the 99th percentile).}
+\label{fig:citemap}
+\end{figure}
+
+\textbf{Implications for the supervised stage.} Topic membership alone is
+predictive of citation outcome, so (i) the SVD text features should carry
+substantial signal into the regressors, (ii) cluster id / distance-to-centroid
+are cheap engineered features worth adding, and (iii) per-cluster error
+analysis (and per-cluster ``highly cited'' base rates) should be reported
+alongside global metrics, since a model can look accurate globally while
+failing on low-signal clusters such as optimization theory.
