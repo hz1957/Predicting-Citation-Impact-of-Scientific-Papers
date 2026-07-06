@@ -32,6 +32,7 @@ Outputs (unsupervised/artifacts/ + outputs/tables/), tags name the INPUTS:
 import json
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -48,6 +49,17 @@ SEED = 42
 K_RANGE_A = range(2, 13)
 K_RANGE_B = range(2, 17)
 TEXT_K = 8
+
+
+def cluster_features(model, X, tag):
+    labels = model.predict(X)
+    distances = model.transform(X).astype(np.float32)
+    one_hot = np.eye(model.n_clusters, dtype=np.float32)[labels]
+    names = (
+        [f"{tag}_cluster_{i}" for i in range(model.n_clusters)]
+        + [f"{tag}_dist_{i}" for i in range(model.n_clusters)]
+    )
+    return labels, np.hstack([one_hot, distances]).astype(np.float32), names
 
 
 def sweep(X, k_range, tag):
@@ -109,9 +121,13 @@ def main():
     X_text = sparse.load_npz(ART / "tfidf.npz")
     vocab = np.array(json.load(open(ART / "vocab.json")))
     svd = TruncatedSVD(n_components=n_svd, random_state=SEED)
-    X_lsa = Normalizer(copy=False).fit_transform(
-        svd.fit_transform(X_text)).astype(np.float32)
+    normalizer = Normalizer(copy=False)
+    X_lsa = normalizer.fit_transform(svd.fit_transform(X_text)).astype(np.float32)
     np.save(ART / "X_lsa.npy", X_lsa)
+    joblib.dump(
+        {"svd": svd, "normalizer": normalizer, "n_svd": int(n_svd)},
+        ART / "text_lsa_transformer.joblib",
+    )
 
     meta_block = d["X"][:, n_svd:]  # standardized metadata from step 1
     # scale so the metadata block's average row norm matches the (unit) text
@@ -129,8 +145,12 @@ def main():
 
     best_k = int(sel_a.loc[sel_a["silhouette"].idxmax(), "k"])
     print(f"text+metadata: silhouette-optimal k = {best_k}", flush=True)
-    lab_asm = labels_a[best_k]
-    lab_arch = labels_b[TEXT_K]
+    km_asm = KMeans(n_clusters=best_k, n_init=10, random_state=SEED).fit(X_asm)
+    km_text = KMeans(n_clusters=TEXT_K, n_init=10, random_state=SEED).fit(X_lsa)
+    lab_asm = km_asm.labels_
+    lab_arch = km_text.labels_
+    joblib.dump(km_asm, ART / "kmeans_text_meta.joblib")
+    joblib.dump(km_text, ART / "kmeans_text.joblib")
     np.save(ART / "labels_text_meta.npy", lab_asm)
     np.save(ART / "labels_text.npy", lab_arch)
     np.savez_compressed(ART / "labels_sweep_text_meta.npz",
@@ -139,6 +159,18 @@ def main():
                         **{f"k{k}": lab for k, lab in labels_b.items()})
     with open(ART / "chosen_k.json", "w") as fh:
         json.dump({"text_meta": best_k, "text": TEXT_K}, fh)
+
+    _, cluster_x_text, cluster_names_text = cluster_features(
+        km_text, X_lsa, "unsup_text"
+    )
+    np.savez_compressed(
+        ART / "cluster_features_text_train.npz",
+        X=cluster_x_text,
+        labels=lab_arch.astype(np.int32),
+        names=np.array(cluster_names_text, dtype=object),
+    )
+    with open(ART / "cluster_feature_names_text.json", "w") as fh:
+        json.dump(cluster_names_text, fh, indent=2)
 
     # ---- profiles, category composition, terms -----------------------------
     for tag, lab, k in [("text_meta", lab_asm, best_k),

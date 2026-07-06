@@ -89,6 +89,10 @@ stylesheet and the figures from `outputs/web/`, plus an interactive
    Both sweeps land in `outputs/tables/model_selection.csv`; profiles,
    per-cluster arXiv category shares, metadata z-scores, and top TF-IDF
    terms land in the other `outputs/tables/*_{text_meta,text}.*` files.
+   The train-fit text transformer and final K-Means models are also exported
+   under `artifacts/` (`tfidf_vectorizer.joblib`,
+   `text_lsa_transformer.joblib`, `kmeans_text.joblib`) so the supervised
+   stage can reuse the exact unsupervised clusters without refitting them.
 
 3. **`run_visualize.py`** — four figures, one package per analysis:
    - `fig_model_selection` — silhouette vs k for both feature sets

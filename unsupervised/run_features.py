@@ -23,6 +23,7 @@ import json
 import time
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -130,6 +131,7 @@ def main():
         allow_pickle=True,
     )
     sparse.save_npz(ART / "tfidf.npz", X_text.tocsr())
+    joblib.dump(tfidf, ART / "tfidf_vectorizer.joblib")
     with open(ART / "vocab.json", "w") as fh:
         json.dump(tfidf.get_feature_names_out().tolist(), fh)
     df[["arxiv_id", "title", "venue", "field"]].to_csv(

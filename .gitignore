@@ -1,7 +1,9 @@
 # data is downloaded from the team Drive (see README.md)
 data/
+reports/
 # intermediate arrays rebuilt by unsupervised/run_features.py
 unsupervised/artifacts/
+supervised/artifacts/
 # local-only preview artifacts (rebuilt by make_preview.sh / run_k_explorer.py)
 unsupervised/report/preview.html
 unsupervised/report/k_explorer_imgs/
