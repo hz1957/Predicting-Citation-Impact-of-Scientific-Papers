@@ -21,6 +21,14 @@ is fit only on the c1 train split (24{,}691 papers) and then applied unchanged
 to the held-out temporal test split (25{,}308 papers), avoiding leakage from
 future papers.
 
+\textbf{Model settings.} Ridge uses $\alpha{=}1.0$ and is trained on
+$\log(1+\text{citations})$. Logistic Regression uses $C{=}1.0$,
+\texttt{class\_weight="balanced"}, and \texttt{max\_iter=2000}. Class
+balancing is used because the high-citation class is rare under the
+train-derived top-decile threshold. For the reported F1, precision, recall,
+and accuracy, Logistic Regression probabilities are converted to labels with
+the default threshold $p \ge 0.5$.
+
 \textbf{Regression baseline.} Ridge is trained on
 $\log(1+\text{3-year citations})$. On the test split it reaches RMSE =
 1.111, MAE = 0.880, $R^2$ = 0.141, and Spearman rank correlation = 0.395
