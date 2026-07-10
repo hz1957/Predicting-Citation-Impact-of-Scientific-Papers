@@ -1,137 +1,56 @@
-<section class="report-content">
-      <h2>1. Introduction & Project Goal</h2>
-      <p>
-        The objective of this project is to predict the long-term citation impact of scientific papers using a mix of textual metadata, author metrics, and venue prestige. By leveraging both unsupervised clustering and supervised regression/classification techniques, we aim to identify the primary driving factors behind academic visibility and assist researchers in evaluating manuscript impact prior to publication.
-      </p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Midterm Report — Predicting Citation Impact of Scientific Papers</title>
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+</head>
+<body>
 
-      <hr />
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <span class="brand">Citation<span>Impact</span></span>
+      <div class="links">
+        <a href="../../index.html">Home</a>
+        <a href="../proposal/">Proposal</a>
+        <a href="../midterm/" class="active">Midterm</a>
+        <a href="../final/">Final</a>
+      </div>
+    </div>
+  </nav>
 
-      <h2>2. Data Collection & Preprocessing</h2>
-      <p>
-        Our dataset is compiled from the OpenAlex API and Semantic Scholar Open Research Corpus, focusing on 50,000 computer science papers published between 2015 and 2020. This window ensures that papers have had sufficient time to accumulate citations.
-      </p>
-      
-      <h3>Feature Engineering & Data Cleaning</h3>
-      <ul>
-        <li><strong>Target Variable:</strong> <code>citation_count</code> (log-transformed as $\log(y + 1)$ to handle the heavy-tailed distribution).</li>
-        <li><strong>Text Features:</strong> Paper titles and abstracts were processed using a pre-trained <code>SciBERT</code> model to extract 768-dimensional dense vector embeddings.</li>
-        <li><strong>Metadata Features:</strong> Extracted publication year, page count, and the number of references.</li>
-        <li><strong>Graph & Network Features:</strong> Calculated the maximum <code>h-index</code> of the co-authors at the time of publication and the <code>Impact Factor</code> (or h5-index) of the publishing venue.</li>
-      </ul>
-      <p>
-        Missing values in author metrics were imputed using the median, and all continuous features were normalized using <code>StandardScaler</code> to prepare them for distance-based algorithms.
-      </p>
+  <header class="hero">
+    <div class="wrap">
+      <h1>Midterm Report</h1>
+      <p class="subtitle">Predicting Citation Impact of Scientific Papers</p>
+      <p class="meta">CS 7641 Machine Learning &middot; Summer 2026</p>
+    </div>
+  </header>
 
-      <hr />
+  <main>
+    <p class="crumb"><a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Midterm</p>
 
-      <h2>3. Unsupervised Analysis</h2>
-      <p>
-        To discover latent structures and groupings within scientific literature without relying on explicit citation labels, we applied unsupervised learning techniques directly to the text embeddings and metadata features.
-      </p>
+    <div class="doc-subnav">
+      <a href="../proposal/">Proposal</a>
+      <a href="../midterm/" class="active">Midterm</a>
+      <a href="../final/">Final</a>
+    </div>
 
-      <h3>Dimensionality Reduction via PCA</h3>
-      <p>
-        Due to the high dimensionality of the SciBERT embeddings (768 dimensions), we applied Principal Component Analysis (PCA). We found that the first 50 principal components retained approximately 85% of the total variance, significantly lowering computational overhead for downstream clustering.
-      </p>
+    <div class="placeholder">
+      <div class="big">&#9203;</div>
+      <h2>Midterm report coming soon</h2>
+      <p>
+        This page will contain data collection &amp; preprocessing details, the unsupervised
+        analysis, our first supervised models, and preliminary quantitative results.
+      </p>
+    </div>
+  </main>
 
-      <h3>K-Means Clustering</h3>
-      <p>
-        Using the elbow method and silhouette scores, we selected an optimal cluster count of $K = 5$. 
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Cluster ID</th>
-            <th>Dominant Fields / Keywords</th>
-            <th>Avg. Citation Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Cluster 0</td>
-            <td>Computer Vision, Deep Learning, Image Segmentation</td>
-            <td>42.5</td>
-          </tr>
-          <tr>
-            <td>Cluster 1</td>
-            <td>Theoretical CS, Cryptography, Algorithms</td>
-            <td>12.1</td>
-          </tr>
-          <tr>
-            <td>Cluster 2</td>
-            <td>Human-Computer Interaction (HCI), Social Computing</td>
-            <td>18.4</td>
-          </tr>
-          <tr>
-            <td>Cluster 3</td>
-            <td>Natural Language Processing, LLMs, Transformers</td>
-            <td>56.2</td>
-          </tr>
-          <tr>
-            <td>Cluster 4</td>
-            <td>Distributed Systems, Cloud Computing, Networks</td>
-            <td>22.8</td>
-          </tr>
-        </tbody>
-      </table>
-      <p>
-        <em>Insight:</em> The unsupervised clustering successfully mapped papers into distinct sub-disciplines, revealing that contemporary AI domains (NLP and Computer Vision) inherently carry a significantly higher baseline citation velocity than theoretical sectors.
-      </p>
+  <footer>
+    CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report
+  </footer>
 
-      <hr />
-
-      <h2>4. Supervised Baseline Models</h2>
-      <p>
-        We framed the predictive task as a regression problem to estimate the log-transformed citation count. We implemented and evaluated three preliminary models:
-      </p>
-      <ol>
-        <li><strong>Linear Regression (Ridge Lasso):</strong> Serves as our baseline to evaluate linear relationships.</li>
-        <li><strong>Random Forest Regressor:</strong> Introduced to capture non-linear feature interactions (e.g., how author h-index acts in synergy with venue impact factor).</li>
-        <li><strong>Support Vector Regression (SVR):</strong> Utilized with an RBF kernel on the top 50 PC components of text embeddings combined with metadata.</li>
-      </ol>
-
-      <hr />
-
-      <h2>5. Preliminary Quantitative Results</h2>
-      <p>
-        The models were evaluated using Mean Squared Error (MSE) and $R^2$ scores on a 20% holdout validation set.
-      </p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Model Architecture</th>
-            <th>Train MSE</th>
-            <th>Validation MSE</th>
-            <th>Validation $R^2$</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Ridge Regression</td>
-            <td>0.452</td>
-            <td>0.468</td>
-            <td>0.385</td>
-          </tr>
-          <tr>
-            <td>Support Vector Regression (RBF)</td>
-            <td>0.312</td>
-            <td>0.354</td>
-            <td>0.531</td>
-          </tr>
-          <tr>
-            <td><strong>Random Forest Regressor</strong></td>
-            <td>0.145</td>
-            <td><strong>0.298</strong></td>
-            <td><strong>0.605</strong></td>
-          </tr>
-        </tbody>
-      </table>
-
-      <h3>Key Findings & Next Steps</h3>
-      <ul>
-        <li><strong>Feature Importance:</strong> Random Forest feature tracking showed that <code>venue_impact_factor</code> and <code>author_max_h_index</code> were the strongest predictive features, heavily outperforming raw text features alone.</li>
-        <li><strong>Overfitting:</strong> The Random Forest model shows signs of overfitting given the gap between train and validation metrics. We intend to address this via hyperparameter tuning (limiting <code>max_depth</code>) and dropout regularization in future iterations.</li>
-        <li><strong>Future Work:</strong> For the final phase, we plan to transition from simple regression models to LightGBM / XGBoost and experiment with training a Graph Neural Network (GNN) over the co-authorship network.</li>
-      </ul>
-    </section>
+</body>
+</html>
