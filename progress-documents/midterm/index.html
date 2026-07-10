@@ -404,32 +404,10 @@ applied unchanged to validation and testing data.
 <h3>
 Unsupervised Learning: K-Means Clustering
 </h3>
-
-
 <p>
-Unsupervised learning is performed on the C1 training split to discover
-latent topic structures and citation-impact archetypes.
-Two K-Means analyses are conducted:
-</p>
-
-
-<ul>
-
-<li>
-Combined text and metadata representation.
-</li>
-
-<li>
-LSA text-only representation.
-</li>
-
-</ul>
-
-
-<p>
-The optimal number of clusters is determined using the Silhouette coefficient
-and Davies--Bouldin index. PCA, UMAP, and t-SNE are used for visualization
-of the learned feature space and citation-impact distribution.
+Unsupervised learning is performed on the C1 training split to discover latent topic structures and citation-impact archetypes. 
+  Two K-Means analyses are conducted: one using the combined text and metadata representation and another using only the LSA text representation. 
+  The optimal number of clusters is determined using the Silhouette coefficient and Davies--Bouldin index. Principal Component Analysis (PCA), UMAP, and t-SNE are employed to visualize the learned clusters and examine their relationship with citation impact.
 </p>
 
 
@@ -437,22 +415,18 @@ of the learned feature space and citation-impact distribution.
 <h3>
 Reason for K-Means Clustering
 </h3>
-
-
 <p>
-K-Means was selected as the primary unsupervised learning method because it
-scales efficiently to large high-dimensional datasets and produces
-interpretable clusters through centroid representations.
+The proposed methods were selected to provide interpretable baseline models while remaining computationally efficient for a dataset containing approximately 150,000 research papers.
+  K-Means was chosen as the primary unsupervised learning algorithm because it scales well to high-dimensional datasets, has relatively low computational complexity, and produces easily interpretable clusters through centroid representations.
+  Since the text features are represented in a latent semantic space after TF--IDF and Truncated Singular Value Decomposition (LSA), Euclidean distance becomes a reasonable similarity measure, making K-Means an appropriate clustering method. 
+  Cluster quality is assessed using the Silhouette coefficient and Davies--Bouldin index, which provide complementary measures of cluster cohesion and separation.
 </p>
 
-
-<p>
-After TF-IDF transformation and Truncated Singular Value Decomposition,
-the text features exist in a latent semantic space where Euclidean distance
-provides a meaningful similarity measure. This makes K-Means an appropriate
-choice for discovering research-topic structures.
+  <p>
+PCA, UMAP, and t-SNE were selected for visualization because each reveals different characteristics of the learned feature space. PCA provides a linear projection that preserves global variance and serves as a baseline visualization.
+  UMAP preserves both local and global neighborhood structures while scaling efficiently to large datasets, whereas t-SNE is effective at revealing local cluster structure despite its higher
+  computational cost. Using all three methods provides a more comprehensive qualitative assessment of the discovered topic archetypes.
 </p>
-
 
 <p>
 Cluster quality is evaluated using complementary metrics:
