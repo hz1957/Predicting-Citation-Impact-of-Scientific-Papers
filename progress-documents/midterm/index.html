@@ -699,7 +699,7 @@ alt="Text-only K-means clusters">
 
 <figcaption>
 
-Text-only \(k=8\) K-Means topic archetypes:
+(k=8\) K-Means topic archetypes:
 (a) PCA,
 (b) UMAP,
 (c) t-SNE,
@@ -712,10 +712,9 @@ Text-only \(k=8\) K-Means topic archetypes:
 
     
 <p>
-For the text-only representation, \(k=8\) was selected because it provides
+For \(k=8\) was selected because it provides
 a finer partition while maintaining interpretable and sufficiently populated
-clusters. It shows the corresponding visualization for the text-only representation with k = 8. Com-
-pared with the coarse partition, the clusters are more diffuse and partially overlap, reflecting the
+clusters. It shows the corresponding visualization for the text-only representation with k = 8. Compared with the coarse partition, the clusters are more diffuse and partially overlap, reflecting the
 continuous nature of research topics. Nevertheless, several distinct semantic regions emerge consis-
 tently across PCA, UMAP, and t-SNE. Inspection of the highest-weight TF–IDF terms identifies
 recognizable research themes, including object detection and 3D vision, reinforcement learning,
@@ -748,106 +747,21 @@ The \(k=3\) clustering using text and metadata representations shows
 consistent separation across PCA, UMAP, and t-SNE projections.
 </p>
 
-
 <p>
-The discovered clusters correspond closely with major research categories:
+An important observation is that these text-defined archetypes exhibit markedly different citation
+behavior. Vision-related topics, segmentation, GANs, and NLP contain substantially larger fractions
+of highly cited papers, whereas optimization-oriented papers receive comparatively fewer citations.
+The NLP cluster displays a particularly heavy-tailed citation distribution, with a small number of
+transformer-era papers accounting for exceptionally large citation counts. These findings indicate
+that topic membership alone contains predictive information regarding future scientific impact, even
+though citation information was never used during clustering.
 </p>
-
-
-<ul>
-
-<li>
-<code>cs.CV</code> Computer Vision
-</li>
-
-<li>
-<code>cs.CL</code> Computational Language
-</li>
-
-<li>
-<code>cs.LG</code> Machine Learning and related areas
-</li>
-
-</ul>
-
-
-<p>
-This demonstrates that K-Means can recover meaningful research domains
-without explicitly using category labels during training.
+    <p>
+Overall, the unsupervised analysis demonstrates that the proposed feature representation captures
+both coarse disciplinary structure and fine-grained topical organization. The resulting K-Means
+clusters provide interpretable impact archetypes and motivate their subsequent use as engineered
+features for the supervised learning models.
 </p>
-
-
-
-
-
-
-<p>
-The text-only clustering produces finer semantic structures. Analysis of
-high-weight TF-IDF terms reveals recognizable research themes:
-</p>
-
-
-<ul>
-
-<li>
-Object detection and 3D vision.
-</li>
-
-<li>
-Reinforcement learning.
-</li>
-
-<li>
-Optimization theory.
-</li>
-
-<li>
-Applied machine learning.
-</li>
-
-<li>
-Deep neural architectures.
-</li>
-
-<li>
-GANs and adversarial learning.
-</li>
-
-<li>
-Image segmentation.
-</li>
-
-<li>
-Natural language processing.
-</li>
-
-</ul>
-
-
-
-<p>
-These topic labels are assigned only after clustering by examining
-representative terms. Therefore, the discovered structures remain entirely
-data-driven.
-</p>
-
-
-
-<p>
-Topic clusters exhibit substantially different citation behaviors.
-Vision-related topics, segmentation, GANs, and NLP contain larger fractions
-of highly cited papers, whereas optimization-oriented research shows lower
-citation impact.
-</p>
-
-
-<p>
-The NLP cluster demonstrates particularly strong citation skew, where a small
-number of transformer-era papers account for a large fraction of citations.
-This observation further supports the use of logarithmic citation
-transformation.
-</p>
-
 
 
 <h3>
