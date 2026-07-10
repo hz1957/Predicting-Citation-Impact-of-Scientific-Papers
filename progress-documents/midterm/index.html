@@ -896,6 +896,227 @@ Regression
 </h3>
 
 
+<section id="supervised">
+  <h2 class="section-title"><span class="section-num">4.</span> Supervised Learning: Baseline Prediction Models</h2>
+
+  <p>
+    For the first supervised milestone, we implemented two deliberately simple baselines from the
+    proposal: <strong>Ridge regression</strong> for predicting 3-year citation counts and
+    <strong>Logistic Regression</strong> for identifying highly cited papers. This section is meant
+    to establish a leakage-safe baseline before adding the cluster-derived features suggested by
+    the unsupervised analysis. Both models therefore use the same base representation as the
+    unsupervised stage wherever possible. Title + abstract text is featurized with TF-IDF,
+    compressed to 100 LSA dimensions with randomized Truncated SVD, and L2-normalized; metadata
+    features include author count, reference count, venue frequency, year, category indicators,
+    affiliation/country counts, and title/abstract lengths. The important supervised difference is
+    that all preprocessing is fit only on the c1 train split (24,691 papers) and then applied
+    unchanged to the held-out temporal test split (25,308 papers), avoiding leakage from future
+    papers.
+  </p>
+
+  <p>
+    <strong>Model settings.</strong> Ridge uses <code>alpha = 1.0</code> and is trained on
+    log(1 + citations). Logistic Regression uses <code>C = 1.0</code>,
+    <code>class_weight = "balanced"</code>, and <code>max_iter = 2000</code>. Class balancing is
+    used because the high-citation class is rare under the train-derived top-decile threshold. For
+    the reported F1, precision, recall, and accuracy, Logistic Regression probabilities are
+    converted to labels with the default threshold <code>p &gt;= 0.5</code>.
+  </p>
+
+  <p>
+    <strong>Regression baseline.</strong> Ridge is trained on
+    log(1 + 3-year citations). On the test split it reaches RMSE = <strong>1.111</strong>,
+    MAE = <strong>0.880</strong>, R<sup>2</sup> = <strong>0.141</strong>, and
+    Spearman rank correlation = <strong>0.395</strong>. The modest R<sup>2</sup> shows that exact
+    citation counts are hard to predict with a linear baseline, especially because citation counts
+    are heavy-tailed. However, the positive Spearman correlation indicates that the model is useful
+    as a ranking signal.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Split</th>
+        <th>RMSE</th>
+        <th>MAE</th>
+        <th>R<sup>2</sup></th>
+        <th>Spearman</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Ridge</td>
+        <td>Train</td>
+        <td>1.193</td>
+        <td>0.956</td>
+        <td>0.179</td>
+        <td>0.411</td>
+      </tr>
+      <tr>
+        <td>Ridge</td>
+        <td>Test</td>
+        <td>1.111</td>
+        <td>0.880</td>
+        <td>0.141</td>
+        <td>0.395</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../assets/img/midterm/ridge_pred_vs_true.png"
+         alt="Ridge predicted log citations versus true log citations on the temporal test split" />
+    <figcaption>
+      <strong>Figure 5.</strong> Ridge predicted versus true log(1 + citations) on the test split.
+      The model captures broad ordering but compresses predictions toward the mean, which is
+      expected for an L2-regularized linear model on heavy-tailed citation data.
+    </figcaption>
+  </figure>
+
+  <p>
+    <strong>Ranking evaluation.</strong> The proposal emphasizes ranking metrics because the
+    practical goal is often to surface papers likely to become influential rather than to predict
+    the exact citation count. Using the Ridge score to rank test papers, the top 10% contains
+    highly cited papers at <strong>20.0%</strong> precision, compared with a
+    <strong>5.9%</strong> base rate in the test split. This corresponds to a
+    <strong>3.39x lift</strong>. Recall@10% is <strong>33.9%</strong>, and
+    NDCG@10% is <strong>0.633</strong>. These results are consistent with the unsupervised finding
+    that topic and metadata contain meaningful impact signal even before cluster id or
+    distance-to-centroid features are added.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Split</th>
+        <th>Precision@10%</th>
+        <th>Recall@10%</th>
+        <th>NDCG@10%</th>
+        <th>Lift@10%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Ridge</td>
+        <td>Train</td>
+        <td>0.297</td>
+        <td>0.294</td>
+        <td>0.655</td>
+        <td>2.94x</td>
+      </tr>
+      <tr>
+        <td>Ridge</td>
+        <td>Test</td>
+        <td>0.200</td>
+        <td>0.339</td>
+        <td>0.633</td>
+        <td>3.39x</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>Classification baseline.</strong> We define "highly cited" using the train split top
+    decile threshold: at least <strong>41 citations</strong> within 3 years. The temporal test set
+    is more difficult, with only <strong>5.9%</strong> positives under this fixed threshold. On
+    test, Logistic Regression obtains ROC-AUC = <strong>0.773</strong> and PR-AUC =
+    <strong>0.180</strong>, compared with a PR baseline of 0.059 from prevalence alone. At the
+    default threshold the model has F1 = <strong>0.255</strong>, precision =
+    <strong>0.169</strong>, and recall = <strong>0.523</strong>. This is a reasonable first-stage
+    screening model: it finds over half of the highly cited test papers, but with many false
+    positives.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Split</th>
+        <th>PR-AUC</th>
+        <th>ROC-AUC</th>
+        <th>F1</th>
+        <th>Precision</th>
+        <th>Recall</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Logistic Regression</td>
+        <td>Train</td>
+        <td>0.263</td>
+        <td>0.771</td>
+        <td>0.316</td>
+        <td>0.202</td>
+        <td>0.719</td>
+      </tr>
+      <tr>
+        <td>Logistic Regression</td>
+        <td>Test</td>
+        <td>0.180</td>
+        <td>0.773</td>
+        <td>0.255</td>
+        <td>0.169</td>
+        <td>0.523</td>
+      </tr>
+      <tr>
+        <td>Prevalence baseline</td>
+        <td>Test</td>
+        <td>0.059</td>
+        <td>0.500</td>
+        <td>0.000</td>
+        <td>0.000</td>
+        <td>0.000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../assets/img/midterm/logistic_pr_curve.png"
+         alt="Precision-recall curve for Logistic Regression on the temporal test split" />
+    <figcaption>
+      <strong>Figure 6.</strong> Precision-recall curve for the Logistic Regression baseline. The
+      PR-AUC of 0.180 is about 3.0 times the 0.059 positive base rate in the test set.
+    </figcaption>
+  </figure>
+
+  <figure>
+    <img src="../../assets/img/midterm/logistic_roc_curve.png"
+         alt="ROC curve for Logistic Regression on the temporal test split" />
+    <figcaption>
+      <strong>Figure 7.</strong> ROC curve for the Logistic Regression baseline. ROC-AUC is 0.773,
+      indicating useful discrimination even though the positive class is rare.
+    </figcaption>
+  </figure>
+
+  <p>
+    <strong>Cluster-feature ablation.</strong> To test the direct link between the unsupervised and
+    supervised stages, we exported the text-only <strong>k&nbsp;=&nbsp;8</strong> K-Means model from
+    the unsupervised pipeline and appended two feature groups to the supervised matrices:
+    cluster-id one-hot indicators and distances to all eight centroids. These features are fit
+    only on the train split by the unsupervised stage and then applied to the test split. The
+    augmented matrix has 260 features instead of 244. On the test split, however, the changes are
+    negligible: Ridge RMSE changes from <strong>1.111</strong> to <strong>1.111</strong>, Spearman
+    from <strong>0.3951</strong> to <strong>0.3951</strong>, Precision@10% from
+    <strong>0.2003</strong> to <strong>0.2007</strong>, and Logistic PR-AUC from
+    <strong>0.1798</strong> to <strong>0.1794</strong>. This suggests that the linear baselines
+    already absorb most of the topic information through the continuous LSA features. The clusters
+    are still valuable for interpretation and per-cluster error analysis, but they do not
+    materially strengthen these first-stage linear models as additional features.
+  </p>
+
+  <p>
+    These baselines establish a leakage-safe supervised pipeline and cover the proposal's
+    regression, ranking, and binary-classification metrics. The main weakness
+    is calibration of the citation tail: Ridge compresses high-impact papers toward average
+    predictions. In the next stage, we will add stronger nonlinear models and report per-cluster
+    error analysis so that model performance can be compared across impact archetypes rather than
+    only globally.
+  </p>
+</section>
+
+    
 <p>
 Supervised regression experiments evaluate whether engineered features can
 predict future citation impact. Ridge Regression and additional regression
