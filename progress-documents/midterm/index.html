@@ -616,34 +616,8 @@ in which every cluster remained interpretable and sufficiently populated. Conseq
 plementary clustering analyses were retained: a coarse three-cluster partition for identifying broad
 research domains and a finer eight-cluster partition for discovering topical impact archetypes.
     </p>
-    <p>
-To better understand the geometry of the learned feature space, PCA, UMAP, and t-SNE pro-
-jections were generated using the fitted embeddings. Figure 3 illustrates the continuous citation
-distribution in the reduced-dimensional space, where each point is colored by the logarithm of its
-three-year citation count. Although citation information was never used during feature construction
-or clustering, regions containing highly cited papers are visibly concentrated rather than uniformly
-distributed throughout the embedding space. This observation suggests that the semantic text
-representation alone already captures meaningful information related to future citation impact
-</p>
 
-
-
-
-<p>
-The comparison demonstrates that metadata features introduce strong
-structural information. The combined representation produces a clear
-interior maximum at \(k=3\), indicating three broad research groups.
-</p>
-
-
-<p>
-For the text-only representation, \(k=8\) was selected because it provides
-a finer partition while maintaining interpretable and sufficiently populated
-clusters.
-</p>
-
-
-
+    
 <figure class="figure">
 
 <img src="../../assets/img/fig_citation_map.png"
@@ -662,15 +636,16 @@ representations contain information correlated with future citation impact.
 
 </figure>
 
-
-
-<p>
-The visualization indicates that highly cited papers are not uniformly
-distributed throughout the feature space. Instead, they appear concentrated
-within specific semantic regions, suggesting that textual representation
-captures meaningful information about future scientific impact.
+    
+    <p>
+To better understand the geometry of the learned feature space, PCA, UMAP, and t-SNE pro-
+jections were generated using the fitted embeddings. Mapping illustrates the continuous citation
+distribution in the reduced-dimensional space, where each point is colored by the logarithm of its
+three-year citation count. Although citation information was never used during feature construction
+or clustering, regions containing highly cited papers are visibly concentrated rather than uniformly
+distributed throughout the embedding space. This observation suggests that the semantic text
+representation alone already captures meaningful information related to future citation impact
 </p>
-
 
 
 <h3>
@@ -696,6 +671,75 @@ Metadata-featured \(k=3\) K-Means clustering results:
 </figcaption>
 
 </figure>
+    
+<p>
+Given feature presents the visualization of the k = 3 clustering using PCA, UMAP, and t-SNE for the
+combined text and metadata representation. All three embedding methods reveal consistent cluster
+boundaries despite preserving different geometric properties. PCA preserves the global variance of
+the feature space, whereas UMAP and t-SNE emphasize local neighborhood relationships. Across
+all three projections, the three clusters are relatively well separated, indicating that the addition of
+metadata introduces strong structural information. Examination of the cluster profiles shows that
+these groups closely correspond to the primary arXiv categories (cs.CV, cs.CL, and cs.LG/Others),
+demonstrating that K-Means successfully recovers the major research domains without using cate-
+gory labels during training.
+    
+</p>
+
+
+    <h3>
+Text-Only \(k=8\) Topic Archetypes
+</h3>
+
+
+
+<figure class="figure">
+
+<img src="../../assets/img/fig_clusters_text_meta.png"
+alt="Text-only K-means clusters">
+
+<figcaption>
+
+Text-only \(k=8\) K-Means topic archetypes:
+(a) PCA,
+(b) UMAP,
+(c) t-SNE,
+(d) median citations,
+(e) top-decile citation fraction.
+
+</figcaption>
+
+</figure>
+
+    
+<p>
+For the text-only representation, \(k=8\) was selected because it provides
+a finer partition while maintaining interpretable and sufficiently populated
+clusters. It shows the corresponding visualization for the text-only representation with k = 8. Com-
+pared with the coarse partition, the clusters are more diffuse and partially overlap, reflecting the
+continuous nature of research topics. Nevertheless, several distinct semantic regions emerge consis-
+tently across PCA, UMAP, and t-SNE. Inspection of the highest-weight TF–IDF terms identifies
+recognizable research themes, including object detection and 3D vision, reinforcement learning,
+optimization theory, applied machine learning, deep neural architectures, GANs and adversarial
+learning, image segmentation, and natural language processing. Since these topic labels are as-
+signed only after clustering by examining representative terms, the discovered structure is entirely
+data driven.
+  
+</p>
+
+
+
+
+
+<p>
+The visualization indicates that highly cited papers are not uniformly
+distributed throughout the feature space. Instead, they appear concentrated
+within specific semantic regions, suggesting that textual representation
+captures meaningful information about future scientific impact.
+</p>
+
+
+
+
 
 
 
@@ -734,29 +778,6 @@ without explicitly using category labels during training.
 
 
 
-<h3>
-Text-Only \(k=8\) Topic Archetypes
-</h3>
-
-
-
-<figure class="figure">
-
-<img src="../../assets/img/fig_clusters_text_meta.png"
-alt="Text-only K-means clusters">
-
-<figcaption>
-
-Text-only \(k=8\) K-Means topic archetypes:
-(a) PCA,
-(b) UMAP,
-(c) t-SNE,
-(d) median citations,
-(e) top-decile citation fraction.
-
-</figcaption>
-
-</figure>
 
 
 
