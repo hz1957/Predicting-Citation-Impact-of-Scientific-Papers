@@ -3,273 +3,1608 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Midterm Report — Predicting Citation Impact of Scientific Papers</title>
-  <meta name="description" content="CS 7641 Summer 2026 project midterm report: predicting the citation impact of scientific papers." />
+
+  <title>Project Proposal — Predicting Citation Impact of Scientific Papers</title>
+
+  <meta name="description"
+        content="CS 7641 Summer 2026 project proposal: Predicting Citation Impact of Scientific Papers using supervised and unsupervised learning." />
+
   <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(','\\)']],
+        displayMath: [['\\[','\\]']]
+      }
+    };
+  </script>
+  <script async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
 </head>
+
 <body>
 
-  <nav class="site-nav">
-    <div class="nav-inner">
-      <span class="brand">Citation<span>Impact</span></span>
-      <div class="links">
-        <a href="../../index.html">Home</a>
-        <a href="../proposal/">Proposal</a>
-        <a href="../midterm/" class="active">Midterm</a>
-        <a href="../final/">Final</a>
-      </div>
-    </div>
-  </nav>
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="brand">
+      Citation<span>Impact</span>
+    </span>
 
-  <header class="hero">
-    <div class="wrap">
-      <h1>Predicting Citation Impact of Scientific Papers</h1>
-      <p class="subtitle">Midterm Progress Report: Pipelines, Clustering, and Supervised Baselines</p>
-      <p class="meta">CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report</p>
-    </div>
-  </header>
-
-  <main>
-
-    <p class="crumb"><a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Midterm</p>
-
-    <div class="doc-subnav">
-      <a href="../proposal/">Proposal</a>
-      <a href="../midterm/" class="active">Midterm</a>
+    <div class="links">
+      <a href="../../index.html">Home</a>
+      <a href="../proposal/" class="active">Proposal</a>
+      <a href="../midterm/">Midterm</a>
       <a href="../final/">Final</a>
     </div>
+  </div>
+</nav>
 
 
-    <div class="card">
-      <p style="margin:0 0 6px"><strong>Team Members:</strong> Shih, Cheng-Jhih; Kim, Jeonghwan; Park, Christopher Y.; Pyo, Jaechan; Zhang, Haoming</p>
-      <p style="margin:0">
-        <strong>Assigned Mentor:</strong> Alexandra Wu
-        &nbsp;&middot;&nbsp; <strong>Submission Date:</strong> 07/10/2026
-        &nbsp;&middot;&nbsp; <strong>"Outstanding Project" Award opt-in:</strong> Yes
-      </p>
-    </div>
+<header class="hero">
 
-    <section id="introduction">
-      <h2 class="section-title"><span class="section-num">1.</span> Introduction &amp; Dataset Status</h2>
-      <p>
-        The exponential growth of the scientific literature in Artificial Intelligence and Machine Learning (AI/ML) makes it increasingly difficult for researchers to parse and surface high-impact research programmatically. In this project, we predict the future citation impact of scientific papers at their time of publication using metadata features and textual indicators.
-      </p>
-      <p>
-        Since our proposal, we have fully assembled and cleaned our target dataset. We compiled a robust corpus of <strong>150,000 papers</strong> from arXiv categories <code>cs.LG</code> (Machine Learning), <code>cs.CL</code> (Computation and Language), and <code>cs.CV</code> (Computer Vision) published between 2018 and 2022. By leveraging the open APIs of <strong>OpenAlex</strong> and <strong>Semantic Scholar</strong>, we enriched each paper with actual citation counts, author publication histories (including individual h-indices), and venue rankings. Restricting the timeline ensures that even the youngest papers in our cohort have a mature citation window of at least 3.5 years.
-      </p>
-    </section>
+<div class="wrap">
 
-    <section id="preprocessing">
-      <h2 class="section-title"><span class="section-num">2.</span> Preprocessing &amp; Feature Engineering</h2>
-      <p>
-        Predicting citation counts is a challenging regression task primarily because citation distributions are notoriously heavy-tailed and heavily skewed. To address this, we executed a dedicated prep pipeline:
-      </p>
-      <ul>
-        <li>
-          <strong>Target Transformation:</strong> We applied a log-transform, <code>y = log(1 + citations)</code>, to normalize the output space, stabilize numerical gradients, and prevent a handful of highly-cited outlier papers from dominating our loss functions.
-        </li>
-        <li>
-          <strong>Textual Feature Engineering:</strong> Titles and abstracts were converted into high-dimensional semantic representations. We compared a TF-IDF baseline compressed via <code>TruncatedSVD</code> to dense 768-dimensional sentence-level <strong>SciBERT</strong> embeddings to capture domain-specific semantic concepts.
-        </li>
-        <li>
-          <strong>Metadata Extraction:</strong> Numeric features (author count, reference count, and text length metrics) were scaled using <code>StandardScaler</code>. Categorical variables (such as target journal/conference venues and primary categories) were frequency-encoded and scaled.
-        </li>
-        <li>
-          <strong>Leakage Prevention:</strong> To ensure realistic out-of-sample evaluations, we partition our data into three distinct temporal cohorts (train, validation, and test based on publication year). This completely prevents look-ahead bias and ensures that author h-index statistics are computed only using information available strictly prior to a paper's publication date.
-        </li>
-      </ul>
-    </section>
+<h1>
+Predicting Citation Impact of Scientific Papers
+</h1>
 
-    <section id="unsupervised">
-      <h2 class="section-title"><span class="section-num">3.</span> Unsupervised Exploration</h2>
-      <p>
-        To discover underlying structures in our feature space, we performed <strong>K-Means clustering</strong> on the combined metadata and textual representations. Using the Silhouette Coefficient and Elbow method, we determined that <code>k = 4</code> clusters provided a highly descriptive partitioning of our dataset:
-      </p>
-      <ol>
-        <li><em>Cluster 0 (Methodological Core):</em> Dense theoretical papers with high reference counts, primarily in <code>cs.LG</code>.</li>
-        <li><em>Cluster 1 (Interdisciplinary Applications):</em> Highly collaborative papers with large author counts bridging CV/CL to physical sciences.</li>
-        <li><em>Cluster 2 (Niche/Preprint Ecosystem):</em> Preprints with lower citation velocity and lower baseline author h-indices.</li>
-        <li><em>Cluster 3 (High-Prestige Anchors):</em> Papers published in flagship venues (e.g., CVPR, NeurIPS) characterized by high initial citation rates.</li>
-      </ol>
-      <p>
-        We visualized these high-dimensional structures in two dimensions using <strong>t-SNE</strong> and <strong>UMAP</strong>. The resulting mappings demonstrate clear spatial separation among our identified clusters, validating that our preprocessing and feature representations carry meaningful structure.
-      </p>
-    </section>
+<p class="subtitle">
+A Regression Approach with Supervised and Unsupervised Learning
+</p>
 
-    <section id="supervised">
-      <h2 class="section-title"><span class="section-num">4.</span> Supervised Learning Progress</h2>
-      <p>
-        We developed and evaluated three distinct regressors of varying model capacity to predict <code>log(1 + citations)</code>:
-      </p>
-      <ul>
-        <li><strong>Ridge Regression:</strong> Served as our linear baseline, offering high interpretability and quick execution.</li>
-        <li><strong>Support Vector Regression (SVR):</strong> Configured with a radial basis function (RBF) kernel to map complex, non-linear relationships.</li>
-        <li><strong>Random Forest Regressor:</strong> A powerful ensemble model consisting of 150 estimators to handle interactions among metadata and textual features.</li>
-      </ul>
-      <p>
-        Our models were evaluated on the validation cohort using standard regression metrics: Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and Coefficient of Determination ($R^2$).
-      </p>
-    </section>
+<p class="meta">
+CS 7641 Machine Learning &middot; Summer 2026 &middot; Project Proposal
+</p>
 
-    <section id="results">
-      <h2 class="section-title"><span class="section-num">5.</span> Preliminary Results &amp; Discussion</h2>
-      <p>
-        The performance of our baseline models is summarized below. The <strong>Random Forest Regressor</strong> demonstrated the strongest performance, achieving an $R^2$ of <strong>0.605</strong> on the validation set, significantly outperforming the linear Ridge model ($R^2 = 0.412$).
-      </p>
-      
-      <table class="data" style="margin-bottom: 20px;">
-        <thead>
-          <tr>
-            <th>Model Architecture</th>
-            <th>Validation MAE</th>
-            <th>Validation RMSE</th>
-            <th>Validation R&sup2;</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Ridge Regression (Baseline)</td>
-            <td>0.684</td>
-            <td>0.895</td>
-            <td>0.412</td>
-          </tr>
-          <tr>
-            <td>Support Vector Regression (RBF Kernel)</td>
-            <td>0.592</td>
-            <td>0.791</td>
-            <td>0.539</td>
-          </tr>
-          <tr style="font-weight: bold; background: #fcfcfc;">
-            <td>Random Forest Regressor</td>
-            <td>0.511</td>
-            <td>0.723</td>
-            <td>0.605</td>
-          </tr>
-        </tbody>
-      </table>
+</div>
 
-      <p>
-        <strong>Feature Importance &amp; Insights:</strong>
-        Our initial SHAP (SHapley Additive exPlanations) analysis indicates that <strong>venue impact factor/prestige</strong> and the <strong>lead author's existing h-index</strong> are the two most powerful predictors of early citation trajectory. Interestingly, text embeddings alone (from both TF-IDF and SciBERT) provide a reliable baseline but struggle to capture the high-end extremes of citation skew on their own, proving that contextual metadata is critical for accurate impact prediction.
-      </p>
+</header>
 
-      <h3>Next Steps &amp; Future Work</h3>
-      <p>
-        Moving forward into the final project phase, we will focus on:
-      </p>
-      <ul>
-        <li><strong>Hyperparameter Optimization:</strong> Utilizing random and grid searches to tune max depth, estimators, and learning rates for XGBoost and LightGBM models.</li>
-        <li><strong>Graph Neural Networks (GNNs):</strong> Exploring the inclusion of a co-authorship and reference citation network to run graph-based node regression, capturing relational features that tree models miss.</li>
-        <li><strong>Ablation Studies:</strong> Systematically stripping away feature groups (e.g., text-only vs. metadata-only) to precisely isolate where the predictive power is generated.</li>
-      </ul>
-    </section>
 
-    <section id="gantt">
-      <h2 class="section-title">Gantt Chart (Progress Update)</h2>
-      <p class="wordnote">
-        Updated project timeline tracking progress up to the Midterm Milestone (July 10, 2026). Completed items are marked. &#9670; = milestone.
-      </p>
-      <div class="gantt">
-        <table class="gantt-table">
-          <thead>
-            <tr>
-              <th class="task-col">Task</th>
-              <th>W4<small>6/8</small></th>
-              <th>W5<small>6/15</small></th>
-              <th>W6<small>6/22</small></th>
-              <th>W7<small>6/29</small></th>
-              <th>W8<small>7/6</small></th>
-              <th>W9<small>7/13</small></th>
-              <th>W10<small>7/20</small></th>
-              <th>W11<small>7/27</small></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="gantt-phase"><td colspan="9">Proposal Phase (Completed)</td></tr>
-            <tr>
-              <td class="task-name" style="text-decoration: line-through; opacity: 0.7;"><span class="owner p-all">ALL</span> Proposal Ideation &amp; Drafting</td>
-              <td><span class="gbar" style="background: #999;"><span class="seg p-all">ALL</span></span></td>
-              <td><span class="gbar" style="background: #999;"><span class="seg p-all">ALL</span></span></td>
-              <td></td><td></td><td></td><td></td><td></td><td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-all">ALL</span> &#9670; Proposal Submission (6/19)</td>
-              <td></td><td><span class="gmile" style="background-color: #28a745;"></span></td><td></td><td></td><td></td><td></td><td></td><td></td>
-            </tr>
+<main>
 
-            <tr class="gantt-phase"><td colspan="9">Execution &amp; Midterm (Completed/In Progress)</td></tr>
-            <tr>
-              <td class="task-name"><span class="owner p-cs">CS</span> Data collection (OpenAlex) &amp; cleaning</td>
-              <td></td><td></td>
-              <td><span class="gbar"><span class="seg p-cs">CS</span></span></td>
-              <td></td><td></td><td></td><td></td><td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-cs">CS</span><span class="owner p-jk">JK</span> Feature engineering &amp; pipeline setup</td>
-              <td></td><td></td>
-              <td colspan="2"><span class="gbar"><span class="seg p-cs">CS</span><span class="seg p-jk">JK</span></span></td>
-              <td></td><td></td><td></td><td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-jk">JK</span> Unsupervised: archetype clustering</td>
-              <td></td><td></td><td></td>
-              <td colspan="2"><span class="gbar"><span class="seg p-jk">JK</span></span></td>
-              <td></td><td></td><td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-hz">HZ</span> Supervised: Ridge / RF / SVR models</td>
-              <td></td><td></td><td></td><td></td>
-              <td colspan="2"><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
-              <td></td><td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-jp">JP</span><span class="owner p-hz">HZ</span> Midterm report compilation</td>
-              <td></td><td></td><td></td><td></td>
-              <td><span class="gbar"><span class="seg p-jp">JP</span><span class="seg p-hz">HZ</span></span></td>
-              <td></td><td></td><td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><strong>&#9670; Midterm report due (7/10)</strong></td>
-              <td></td><td></td><td></td><td></td><td><span class="gmile"></span></td><td></td><td></td><td></td>
-            </tr>
 
-            <tr class="gantt-phase"><td colspan="9">Remaining Goals (Upcoming)</td></tr>
-            <tr>
-              <td class="task-name"><span class="owner p-hz">HZ</span><span class="owner p-cp">CP</span> Hyperparameter tuning &amp; GNNs</td>
-              <td></td><td></td><td></td><td></td><td></td>
-              <td colspan="2"><span class="gbar" style="opacity: 0.65;"><span class="seg p-hz">HZ</span><span class="seg p-cp">CP</span></span></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-jk">JK</span> Trend and ablation analysis</td>
-              <td></td><td></td><td></td><td></td><td></td>
-              <td colspan="2"><span class="gbar" style="opacity: 0.65;"><span class="seg p-jk">JK</span></span></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td class="task-name"><span class="owner p-cp">CP</span><span class="owner p-jp">JP</span> Final report &amp; presentation recording</td>
-              <td></td><td></td><td></td><td></td><td></td><td></td>
-              <td colspan="2"><span class="gbar" style="opacity: 0.65;"><span class="seg p-cp">CP</span><span class="seg p-jp">JP</span></span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="gantt-people">
-        <span class="who"><span class="owner p-jp">JP</span> Pyo, Jaechan</span>
-        <span class="who"><span class="owner p-cs">CS</span> Shih, Cheng-Jhih</span>
-        <span class="who"><span class="owner p-jk">JK</span> Kim, Jeonghwan</span>
-        <span class="who"><span class="owner p-hz">HZ</span> Zhang, Haoming</span>
-        <span class="who"><span class="owner p-cp">CP</span> Park, Christopher Y.</span>
-        <span class="who"><span class="owner p-all">ALL</span> Whole team</span>
-      </div>
-    </section>
+<p class="crumb">
+<a href="../../index.html">Home</a>
+&rsaquo;
+Progress Documents
+&rsaquo;
+Proposal
+</p>
 
-  </main>
 
-  <footer>
-    CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report
-  </footer>
+<div class="doc-subnav">
+
+<a href="../proposal/" class="active">
+Proposal
+</a>
+
+<a href="../midterm/">
+Midterm
+</a>
+
+<a href="../final/">
+Final
+</a>
+
+</div>
+
+
+
+<div class="card">
+
+<p style="margin:0 0 6px">
+
+<strong>Team Members:</strong>
+Shih, Cheng-Jhih;
+Kim, Jeonghwan;
+Park, Christopher Y.;
+Pyo, Jaechan;
+Zhang, Haoming
+
+</p>
+
+
+<p style="margin:0">
+
+<strong>Assigned Mentor:</strong>
+Alexandra Wu
+
+&nbsp;&middot;&nbsp;
+
+<strong>Submission Date:</strong>
+07/10/2026
+
+&nbsp;&middot;&nbsp;
+
+<strong>Award opt-in:</strong>
+Yes
+
+</p>
+
+</div>
+
+
+
+<section id="introduction">
+
+
+<h2 class="section-title">
+<span class="section-num">1.</span>
+Introduction &amp; Background
+</h2>
+
+
+<p>
+The number of citations a paper accrues is a widely used---if imperfect---proxy
+for scientific influence. Citation dynamics are extremely skewed: in computer
+science, the most-cited 7% of papers collect over half of all citations while
+roughly 21% go uncited. This concentration has intensified as AI publication
+volume has rapidly increased.
+</p>
+
+
+<p>
+With thousands of AI papers posted each month, it becomes difficult to
+determine which research will have long-term influence shortly after
+publication. A predictive model that forecasts citation impact could assist
+researchers, reviewers, and libraries in identifying promising work before
+citations accumulate.
+</p>
+
+
+<p>
+Text-only approaches generally provide limited predictive capability, whereas
+bibliometric and metadata signals available near publication consistently
+provide additional predictive power. In this project, we study citation
+prediction for AI/ML papers and investigate which characteristics drive
+predicted scientific impact.
+</p>
+
+
+
+<figure class="figure">
+
+<img src="../../assets/images/fig_citation_skew.png"
+     alt="Citation distribution skew">
+
+<figcaption>
+
+Lorenz curve of the computer-science citation distribution.
+The most-cited 7% of papers collect approximately 50% of citations,
+approximately 21% are uncited, and the Gini coefficient is approximately
+0.73. This concentration motivates a learned prediction model and
+log-transformed citation targets.
+
+</figcaption>
+
+</figure>
+
+
+
+<p>
+For this project milestone, we establish a complete leakage-free machine
+learning pipeline. After preprocessing the dataset and constructing text and
+metadata representations, we implement unsupervised clustering and supervised
+baseline models to evaluate predictive capability.
+</p>
+
+
+
+<h3>
+Dataset
+</h3>
+
+
+<p>
+We assemble the dataset from open sources requiring no API keys. A HuggingFace
+arXiv corpus provides titles, abstracts, authors, and publication dates. These
+records are enriched with citation counts and affiliations from OpenAlex.
+The dataset focuses on AI/ML categories:
+<code>cs.LG</code>,
+<code>cs.CL</code>,
+and
+<code>cs.CV</code>.
+</p>
+
+
+<p>
+Approximately 50,000 papers published between 2018 and 2022 are sampled so
+that citation counts have sufficient time to mature. Before model development,
+all collected data are transformed into text and metadata feature
+representations to ensure an efficient and leakage-free learning pipeline.
+</p>
+
+
+<p>
+<strong>Data sources:</strong>
+</p>
+
+
+<ul>
+
+<li>
+<a href="https://huggingface.co/datasets/CShorten/ML-ArXiv-Papers">
+HuggingFace ML-ArXiv Papers Dataset
+</a>
+</li>
+
+<li>
+<a href="https://openalex.org">
+OpenAlex Scholarly Database
+</a>
+</li>
+
+</ul>
+
+
+
+</section>
+
+
+
+
+<section id="problem">
+
+
+<h2 class="section-title">
+<span class="section-num">2.</span>
+Problem Definition
+</h2>
+
+
+<p>
+
+<strong>Problem.</strong>
+
+Given features describing a scientific paper at publication time
+(title, abstract, venue, author count, reference count, field, and year),
+predict its fixed-window citation count. This is formulated as a regression
+problem.
+
+</p>
+
+
+<p>
+
+We also investigate a binary classification formulation:
+whether a paper becomes highly cited, defined as belonging to the top decile
+of fixed-window citations within its field and publication year.
+
+</p>
+
+
+
+<p>
+
+<strong>Motivation.</strong>
+
+Reliable early estimates of scientific impact could help researchers,
+libraries, and reviewers prioritize rapidly growing literature. Furthermore,
+feature importance analysis reveals which characteristics influence eventual
+citation outcomes.
+
+</p>
+
+
+
+<p>
+
+Citation prediction also provides an opportunity to study biases embedded in
+citation systems. Therefore, predictions are interpreted descriptively rather
+than as measures of scientific merit.
+
+</p>
+
+<section id="methods">
+
+<h2 class="section-title">
+<span class="section-num">3.</span>
+Methods
+</h2>
+
+
+<h3>
+Dataset and Preprocessing
+</h3>
+
+
+<p>
+The dataset consists of approximately <strong>150,000</strong> AI and machine
+learning research papers collected from the arXiv categories
+<code>cs.LG</code>,
+<code>cs.CL</code>,
+and
+<code>cs.CV</code>.
+Each record contains bibliographic metadata, publication venue,
+author information, citation information, and extracted textual features.
+</p>
+
+
+<p>
+The papers are divided into three temporal cohorts according to publication
+year. The primary experiments use the C1 cohort, where earlier papers are
+used for training and later papers are reserved for testing. This temporal
+split prevents information leakage and provides a realistic prediction
+setting.
+</p>
+
+
+
+<table class="data">
+
+<thead>
+
+<tr>
+<th>Cohort</th>
+<th>Years</th>
+<th>Papers</th>
+<th>Target</th>
+<th>Purpose</th>
+</tr>
+
+</thead>
+
+
+<tbody>
+
+<tr>
+<td>C1</td>
+<td>2018--2022</td>
+<td>49,999</td>
+<td>Citations within first 3 years</td>
+<td>Training / Evaluation</td>
+</tr>
+
+
+<tr>
+<td>C2</td>
+<td>2023--2024</td>
+<td>50,000</td>
+<td>Citations within first 1 year</td>
+<td>Generalization</td>
+</tr>
+
+
+<tr>
+<td>C3</td>
+<td>2025--2026</td>
+<td>49,974</td>
+<td>Citations to date</td>
+<td>Forecasting</td>
+</tr>
+
+</tbody>
+
+</table>
+
+
+
+<p>
+Citation counts exhibit a strongly skewed distribution. Therefore, the
+prediction target is transformed using:
+</p>
+
+
+<p>
+\[
+y=\log(1+\text{target\_citations})
+\]
+</p>
+
+
+<p>
+Only information available at publication time is used for feature
+construction. Citation-derived variables that could introduce target leakage
+are excluded.
+</p>
+
+
+
+<p>
+Paper titles and abstracts are converted into TF-IDF vectors and compressed
+into a 100-dimensional latent semantic representation using Truncated
+Singular Value Decomposition (LSA).
+</p>
+
+
+<p>
+Metadata features including publication year, author count, reference count,
+venue frequency, document length, affiliation statistics, and arXiv category
+indicators are standardized using
+<code>StandardScaler</code>.
+All preprocessing steps are fitted only on the training split and then
+applied unchanged to validation and testing data.
+</p>
+
+
+
+<h3>
+Unsupervised Learning: K-Means Clustering
+</h3>
+
+
+<p>
+Unsupervised learning is performed on the C1 training split to discover
+latent topic structures and citation-impact archetypes.
+Two K-Means analyses are conducted:
+</p>
+
+
+<ul>
+
+<li>
+Combined text and metadata representation.
+</li>
+
+<li>
+LSA text-only representation.
+</li>
+
+</ul>
+
+
+<p>
+The optimal number of clusters is determined using the Silhouette coefficient
+and Davies--Bouldin index. PCA, UMAP, and t-SNE are used for visualization
+of the learned feature space and citation-impact distribution.
+</p>
+
+
+
+<h3>
+Reason for K-Means Clustering
+</h3>
+
+
+<p>
+K-Means was selected as the primary unsupervised learning method because it
+scales efficiently to large high-dimensional datasets and produces
+interpretable clusters through centroid representations.
+</p>
+
+
+<p>
+After TF-IDF transformation and Truncated Singular Value Decomposition,
+the text features exist in a latent semantic space where Euclidean distance
+provides a meaningful similarity measure. This makes K-Means an appropriate
+choice for discovering research-topic structures.
+</p>
+
+
+<p>
+Cluster quality is evaluated using complementary metrics:
+</p>
+
+
+<ul>
+
+<li>
+<strong>Silhouette coefficient:</strong>
+measures cluster cohesion and separation.
+</li>
+
+<li>
+<strong>Davies--Bouldin index:</strong>
+evaluates similarity between clusters.
+</li>
+
+</ul>
+
+
+
+<p>
+PCA, UMAP, and t-SNE provide complementary visualization perspectives.
+PCA preserves global variance, UMAP captures local and global neighborhood
+structures efficiently, and t-SNE highlights local cluster organization.
+</p>
+
+
+
+<h3>
+Supervised Learning: Ridge and Logistic Regression
+</h3>
+
+
+<p>
+Two linear baseline models are implemented:
+</p>
+
+
+<ul>
+
+<li>
+<strong>Ridge Regression:</strong>
+predicts log-transformed citation counts.
+</li>
+
+<li>
+<strong>Logistic Regression:</strong>
+identifies highly cited papers using a binary classification threshold.
+</li>
+
+</ul>
+
+
+<p>
+Both models use the same leakage-free feature representation described above
+and are trained exclusively on the C1 training cohort.
+</p>
+
+
+
+<p>
+The Ridge Regression model uses:
+</p>
+
+
+<ul>
+
+<li>
+Regularization parameter:
+<code>\(\alpha=1.0\)</code>
+</li>
+
+</ul>
+
+
+
+<p>
+The Logistic Regression classifier uses:
+</p>
+
+
+<ul>
+
+<li>
+<code>C=1.0</code>
+</li>
+
+<li>
+<code>class_weight="balanced"</code>
+</li>
+
+<li>
+<code>max_iter=2000</code>
+</li>
+
+</ul>
+
+
+
+<p>
+Performance is evaluated using regression, ranking, and classification
+metrics. In addition, cluster assignments from K-Means are incorporated as
+engineered features through an ablation study to determine whether
+unsupervised topic information improves supervised prediction.
+</p>
+
+
+
+<h3>
+Reason for Regression Method
+</h3>
+
+
+<p>
+Ridge Regression and Logistic Regression provide interpretable baseline
+models for high-dimensional sparse features.
+</p>
+
+
+<p>
+Ridge Regression reduces overfitting through L2 regularization while
+maintaining continuous citation prediction capability. Logistic Regression
+provides probabilistic predictions for identifying highly cited papers and
+serves as a transparent classification baseline.
+</p>
+
+
+<p>
+These baseline models establish a reference point for evaluating future
+nonlinear approaches such as tree-based ensembles and graph neural networks.
+</p>
+
+
+</section>
+
+  <section id="results">
+
+<h2 class="section-title">
+<span class="section-num">4.</span>
+Results &amp; Discussion
+</h2>
+
+
+<h3>
+K-Means Clustering
+</h3>
+
+
+<p>
+The unsupervised learning pipeline investigates whether latent semantic
+representations of research papers naturally form meaningful groups and
+whether these groups exhibit different citation characteristics.
+</p>
+
+
+<p>
+After constructing the 100-dimensional LSA representation from TF-IDF
+features, two K-Means analyses were performed:
+</p>
+
+
+<ul>
+
+<li>
+Text representation only.
+</li>
+
+<li>
+Combined text and standardized metadata representation.
+</li>
+
+</ul>
+
+
+<p>
+Cluster quality was evaluated using the Silhouette coefficient over multiple
+values of \(k\). PCA, UMAP, and t-SNE were applied to visualize the learned
+feature space.
+</p>
+
+
+
+<figure class="figure">
+
+<img src="../../assets/images/fig_model_selection.png"
+alt="K-means silhouette score comparison">
+
+<figcaption>
+
+Metadata-featured and text-only LSA clustering evaluation.
+The metadata-enhanced representation shows a clear maximum near
+\(k=3\), while text-only clustering exhibits a gradual improvement with
+increasing cluster number.
+
+</figcaption>
+
+</figure>
+
+
+
+<p>
+The comparison demonstrates that metadata features introduce strong
+structural information. The combined representation produces a clear
+interior maximum at \(k=3\), indicating three broad research groups.
+</p>
+
+
+<p>
+For the text-only representation, \(k=8\) was selected because it provides
+a finer partition while maintaining interpretable and sufficiently populated
+clusters.
+</p>
+
+
+
+<figure class="figure">
+
+<img src="../../assets/images/fig_citation_map.png"
+alt="Citation embedding visualization">
+
+<figcaption>
+
+Citation distribution in reduced-dimensional embedding space:
+(a) PCA,
+(b) UMAP,
+(c) t-SNE.
+The concentration of highly cited papers demonstrates that semantic
+representations contain information correlated with future citation impact.
+
+</figcaption>
+
+</figure>
+
+
+
+<p>
+The visualization indicates that highly cited papers are not uniformly
+distributed throughout the feature space. Instead, they appear concentrated
+within specific semantic regions, suggesting that textual representation
+captures meaningful information about future scientific impact.
+</p>
+
+
+
+<h3>
+Metadata-Based \(k=3\) Clustering
+</h3>
+
+
+
+<figure class="figure">
+
+<img src="../../assets/images/fig_clusters_text_meta.png"
+alt="Metadata featured K-means clusters">
+
+<figcaption>
+
+Metadata-featured \(k=3\) K-Means clustering results:
+(a) PCA,
+(b) UMAP,
+(c) t-SNE,
+(d) median citations,
+(e) top-decile citation fraction.
+
+</figcaption>
+
+</figure>
+
+
+
+<p>
+The \(k=3\) clustering using text and metadata representations shows
+consistent separation across PCA, UMAP, and t-SNE projections.
+</p>
+
+
+<p>
+The discovered clusters correspond closely with major research categories:
+</p>
+
+
+<ul>
+
+<li>
+<code>cs.CV</code> Computer Vision
+</li>
+
+<li>
+<code>cs.CL</code> Computational Language
+</li>
+
+<li>
+<code>cs.LG</code> Machine Learning and related areas
+</li>
+
+</ul>
+
+
+<p>
+This demonstrates that K-Means can recover meaningful research domains
+without explicitly using category labels during training.
+</p>
+
+
+
+<h3>
+Text-Only \(k=8\) Topic Archetypes
+</h3>
+
+
+
+<figure class="figure">
+
+<img src="../../assets/images/fig_clusters_text_meta.png"
+alt="Text-only K-means clusters">
+
+<figcaption>
+
+Text-only \(k=8\) K-Means topic archetypes:
+(a) PCA,
+(b) UMAP,
+(c) t-SNE,
+(d) median citations,
+(e) top-decile citation fraction.
+
+</figcaption>
+
+</figure>
+
+
+
+<p>
+The text-only clustering produces finer semantic structures. Analysis of
+high-weight TF-IDF terms reveals recognizable research themes:
+</p>
+
+
+<ul>
+
+<li>
+Object detection and 3D vision.
+</li>
+
+<li>
+Reinforcement learning.
+</li>
+
+<li>
+Optimization theory.
+</li>
+
+<li>
+Applied machine learning.
+</li>
+
+<li>
+Deep neural architectures.
+</li>
+
+<li>
+GANs and adversarial learning.
+</li>
+
+<li>
+Image segmentation.
+</li>
+
+<li>
+Natural language processing.
+</li>
+
+</ul>
+
+
+
+<p>
+These topic labels are assigned only after clustering by examining
+representative terms. Therefore, the discovered structures remain entirely
+data-driven.
+</p>
+
+
+
+<p>
+Topic clusters exhibit substantially different citation behaviors.
+Vision-related topics, segmentation, GANs, and NLP contain larger fractions
+of highly cited papers, whereas optimization-oriented research shows lower
+citation impact.
+</p>
+
+
+<p>
+The NLP cluster demonstrates particularly strong citation skew, where a small
+number of transformer-era papers account for a large fraction of citations.
+This observation further supports the use of logarithmic citation
+transformation.
+</p>
+
+
+
+<h3>
+Summary of K-Means Findings
+</h3>
+
+
+<ul>
+
+<li>
+The coarse clustering using text and metadata features (\(k=3\)) closely
+matches major arXiv research categories. Citation outcomes differ between
+groups, with Computer Vision showing approximately 15% top-decile papers,
+Computational Language approximately 11%, and Machine Learning/Other
+approximately 8%.
+</li>
+
+
+<li>
+The finer text-only clustering (\(k=8\)) identifies interpretable topic
+archetypes. Vision, segmentation, NLP, and GAN-related clusters exhibit
+higher citation impact, while optimization theory forms the lowest-impact
+cluster.
+</li>
+
+
+<li>
+The NLP cluster exhibits a heavy-tailed citation distribution, with a mean
+of 47.6 citations but a median of only 6 citations, demonstrating why
+log-transformed targets are necessary.
+</li>
+
+
+<li>
+The relationship between semantic topic structure and citation impact
+suggests that text representations provide predictive information before
+citation variables are introduced.
+</li>
+
+
+</ul>
+
+
+
+
+<h3>
+Regression
+</h3>
+
+
+<p>
+Supervised regression experiments evaluate whether engineered features can
+predict future citation impact. Ridge Regression and additional regression
+models are compared using standard regression metrics.
+</p>
+
+
+<p>
+Results from the regression experiments will be incorporated after completion
+of the final evaluation stage.
+</p>
+
+
+</section>
+
+
+
+
+
+<section id="conclusion">
+
+
+<h2 class="section-title">
+<span class="section-num">5.</span>
+Conclusion and Future Work
+</h2>
+
+
+<p>
+This project develops a machine learning framework for predicting scientific
+citation impact using publicly available paper metadata and textual
+representations.
+</p>
+
+
+<p>
+The initial unsupervised analysis demonstrates that semantic representations
+capture meaningful research structures and reveal topic-dependent citation
+patterns.
+</p>
+
+
+<p>
+Future work will extend the supervised models using nonlinear approaches,
+including ensemble learning methods, hyperparameter optimization, and
+graph-based models incorporating citation and collaboration networks.
+</p>
+
+
+</section>
+
+
+
+
+<section id="ethics">
+
+
+<h2 class="section-title">
+Ethics &amp; Sustainability
+</h2>
+
+
+<p>
+Citation counts contain known biases related to venue prestige, field size,
+language effects, and demographic disparities. Therefore, predicted impact
+should not be interpreted as a measure of scientific merit.
+</p>
+
+
+<p>
+The model is intended as a descriptive analytical tool for understanding
+citation dynamics rather than a decision-making system for evaluating
+researchers or allocating resources.
+</p>
+
+
+<p>
+Because this analysis is observational, feature importance results represent
+associations rather than causal relationships. Additionally, citation labels
+are dependent on the selected data source and may contain incomplete coverage.
+</p>
+
+
+</section>
+
+  <section id="references">
+
+
+<h2 class="section-title">
+References
+</h2>
+
+
+<ol class="references">
+
+
+<li>
+Yan, R., Tang, J., Liu, X., Shan, D., and Li, X.
+"Citation Count Prediction: Learning to Estimate Future Citations for Literature."
+Proceedings of the 20th ACM International Conference on Information and Knowledge Management (CIKM), 2011.
+</li>
+
+
+<li>
+Wang, D., Song, C., and Barabási, A.-L.
+"Quantifying Long-Term Scientific Impact."
+Science, 342(6154), 127--132, 2013.
+</li>
+
+
+<li>
+Priem, J., Piwowar, H., and Orr, R.
+"OpenAlex: A Fully-Open Index of Scholarly Works, Authors, Venues,
+Institutions, and Concepts."
+arXiv:2205.01833, 2022.
+</li>
+
+
+<li>
+Chen, T. and Guestrin, C.
+"XGBoost: A Scalable Tree Boosting System."
+Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge
+Discovery and Data Mining, 2016.
+</li>
+
+
+<li>
+Pedregosa, F. et al.
+"Scikit-learn: Machine Learning in Python."
+Journal of Machine Learning Research, 12, 2825--2830, 2011.
+</li>
+
+
+<li>
+Fortunato, S. et al.
+"Science of Science."
+Science, 359(6379), eaao0185, 2018.
+</li>
+
+
+<li>
+Franceschet, M.
+"The Skewness of Computer Science."
+Information Processing &amp; Management,
+47(1), 117--124, 2011.
+</li>
+
+
+<li>
+van Dongen, M. M., Maillette de Buy Wenniger, G., and Schomaker, L.
+"SChuBERT: Scholarly Document Chunks with BERT-encoding Boost Citation
+Count Prediction."
+Proceedings of the First Workshop on Scholarly Document Processing,
+2020.
+</li>
+
+
+</ol>
+
+
+</section>
+
+
+
+
+
+<section id="gantt">
+
+
+<h2 class="section-title">
+Gantt Chart
+</h2>
+
+
+<p class="wordnote">
+Project timeline from proposal development through final submission.
+</p>
+
+
+
+<div class="gantt">
+
+
+<table class="gantt-table">
+
+
+<thead>
+
+<tr>
+
+<th class="task-col">
+Task
+</th>
+
+<th>
+W1
+</th>
+
+<th>
+W2
+</th>
+
+<th>
+W3
+</th>
+
+<th>
+W4
+</th>
+
+<th>
+W5
+</th>
+
+<th>
+W6
+</th>
+
+<th>
+W7
+</th>
+
+<th>
+W8
+</th>
+
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+
+<tr>
+
+<td class="task-name">
+Project scoping &amp; proposal
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-all">
+ALL
+</span>
+</span>
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+<tr>
+
+<td class="task-name">
+&#9670; Proposal submission
+</td>
+
+<td>
+<span class="gmile"></span>
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+<tr>
+
+<td class="task-name">
+Data collection and cleaning
+</td>
+
+<td></td>
+<td>
+<span class="gbar">
+<span class="seg p-cs">
+DATA
+</span>
+</span>
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-cs">
+DATA
+</span>
+</span>
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+<tr>
+
+<td class="task-name">
+Feature engineering and EDA
+</td>
+
+<td></td>
+<td></td>
+
+<td>
+<span class="gbar">
+<span class="seg p-jk">
+FEATURES
+</span>
+</span>
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-jk">
+FEATURES
+</span>
+</span>
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td class="task-name">
+Unsupervised learning:
+impact archetype clustering
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+
+<td>
+<span class="gbar">
+<span class="seg p-jk">
+K-MEANS
+</span>
+</span>
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-jk">
+K-MEANS
+</span>
+</span>
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td class="task-name">
+Supervised regression:
+Ridge / RF / XGBoost
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+<td>
+<span class="gbar">
+<span class="seg p-hz">
+MODEL
+</span>
+</span>
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-hz">
+MODEL
+</span>
+</span>
+</td>
+
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td class="task-name">
+&#9670; Midterm report
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>
+<span class="gmile"></span>
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td class="task-name">
+Model tuning and evaluation
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+<td>
+<span class="gbar">
+<span class="seg p-cp">
+EVAL
+</span>
+</span>
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-cp">
+EVAL
+</span>
+</span>
+</td>
+
+<td></td>
+
+</tr>
+
+
+
+
+<tr>
+
+<td class="task-name">
+Final report + presentation
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+<td>
+<span class="gbar">
+<span class="seg p-jp">
+FINAL
+</span>
+</span>
+</td>
+
+<td>
+<span class="gbar">
+<span class="seg p-jp">
+FINAL
+</span>
+</span>
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<td class="task-name">
+&#9670; Final submission
+</td>
+
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+
+<td>
+<span class="gmile"></span>
+</td>
+
+</tr>
+
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+</section>
+
+
+
+
+
+<section id="contribution">
+
+
+<h2 class="section-title">
+Contribution Table
+</h2>
+
+
+
+<table class="data">
+
+
+<thead>
+
+<tr>
+
+<th>
+Name
+</th>
+
+<th>
+Contribution
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+<tr>
+
+<td>
+Shih, Cheng-Jhih
+</td>
+
+<td>
+Problem definition, dataset selection, ethics and sustainability,
+references, proposal writing, and review.
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<td>
+Kim, Jeonghwan
+</td>
+
+<td>
+Gantt chart, methodology development, proposal writing, and review.
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<td>
+Park, Christopher Y.
+</td>
+
+<td>
+Presentation development, video creation, recording, and review.
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<td>
+Pyo, Jaechan
+</td>
+
+<td>
+Introduction, background research, literature review,
+proposal writing, and review.
+</td>
+
+</tr>
+
+
+
+<tr>
+
+<td>
+Zhang, Haoming
+</td>
+
+<td>
+Methods, references, potential results, discussion,
+proposal writing, and review.
+</td>
+
+</tr>
+
+
+</tbody>
+
+
+</table>
+
+
+</section>
+
+
+
+</main>
+
+
+
+<footer>
+
+CS 7641 Machine Learning &middot;
+Summer 2026 &middot;
+Project Proposal
+
+</footer>
+
 
 </body>
+
 </html>
+</section>
