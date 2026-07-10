@@ -274,23 +274,5 @@
     CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report
   </footer>
 
-  <script>
-    // Live word count of sections 1-5, counting section headings, subheadings, and lists
-    (function () {
-      var ids = ['introduction', 'preprocessing', 'unsupervised', 'supervised', 'results'];
-      var total = 0;
-      ids.forEach(function (id) {
-        var sec = document.getElementById(id);
-        if (!sec) return;
-        var text = (sec.textContent || '').trim();
-        if (text) total += text.split(/\s+/).length;
-      });
-      var el = document.getElementById('wordcount');
-      if (!el) return;
-      el.innerHTML = 'Midterm report text (sections 1&ndash;5, all-inclusive): <strong>' + total + '</strong> / 1500 words';
-      el.classList.add(total < 1500 ? 'ok' : 'over');
-    })();
-  </script>
-
 </body>
 </html>
