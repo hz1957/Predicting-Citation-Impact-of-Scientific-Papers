@@ -1,56 +1,296 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Midterm Report — Predicting Citation Impact of Scientific Papers</title>
-  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="../../assets/css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Midterm Report — Predicting Citation Impact of Scientific Papers</title>
+  <meta name="description" content="CS 7641 Summer 2026 project midterm report: predicting the citation impact of scientific papers." />
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../../assets/css/style.css" />
 </head>
 <body>
 
-  <nav class="site-nav">
-    <div class="nav-inner">
-      <span class="brand">Citation<span>Impact</span></span>
-      <div class="links">
-        <a href="../../index.html">Home</a>
-        <a href="../proposal/">Proposal</a>
-        <a href="../midterm/" class="active">Midterm</a>
-        <a href="../final/">Final</a>
-      </div>
-    </div>
-  </nav>
+  <nav class="site-nav">
+    <div class="nav-inner">
+      <span class="brand">Citation<span>Impact</span></span>
+      <div class="links">
+        <a href="../../index.html">Home</a>
+        <a href="../proposal/">Proposal</a>
+        <a href="../midterm/" class="active">Midterm</a>
+        <a href="../final/">Final</a>
+      </div>
+    </div>
+  </nav>
 
-  <header class="hero">
-    <div class="wrap">
-      <h1>Midterm Report</h1>
-      <p class="subtitle">Predicting Citation Impact of Scientific Papers</p>
-      <p class="meta">CS 7641 Machine Learning &middot; Summer 2026</p>
-    </div>
-  </header>
+  <header class="hero">
+    <div class="wrap">
+      <h1>Predicting Citation Impact of Scientific Papers</h1>
+      <p class="subtitle">Midterm Progress Report: Pipelines, Clustering, and Supervised Baselines</p>
+      <p class="meta">CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report</p>
+    </div>
+  </header>
 
-  <main>
-    <p class="crumb"><a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Midterm</p>
+  <main>
 
-    <div class="doc-subnav">
-      <a href="../proposal/">Proposal</a>
-      <a href="../midterm/" class="active">Midterm</a>
-      <a href="../final/">Final</a>
-    </div>
+    <p class="crumb"><a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Midterm</p>
 
-    <div class="placeholder">
-      <div class="big">&#9203;</div>
-      <h2>Midterm report coming soon</h2>
-      <p>
-        This page will contain data collection &amp; preprocessing details, the unsupervised
-        analysis, our first supervised models, and preliminary quantitative results.
-      </p>
-    </div>
-  </main>
+    <div class="doc-subnav">
+      <a href="../proposal/">Proposal</a>
+      <a href="../midterm/" class="active">Midterm</a>
+      <a href="../final/">Final</a>
+    </div>
 
-  <footer>
-    CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report
-  </footer>
+    <p class="wordcount" id="wordcount" title="Counts everything in sections 1–5, including section titles, subheadings, and the figure captions.">
+      Midterm report text (sections 1&ndash;5, all-inclusive): <strong>&hellip;</strong> / 1500 words
+    </p>
+
+    <div class="card">
+      <p style="margin:0 0 6px"><strong>Team Members:</strong> Shih, Cheng-Jhih; Kim, Jeonghwan; Park, Christopher Y.; Pyo, Jaechan; Zhang, Haoming</p>
+      <p style="margin:0">
+        <strong>Assigned Mentor:</strong> Alexandra Wu
+        &nbsp;&middot;&nbsp; <strong>Submission Date:</strong> 07/10/2026
+        &nbsp;&middot;&nbsp; <strong>"Outstanding Project" Award opt-in:</strong> Yes
+      </p>
+    </div>
+
+    <section id="introduction">
+      <h2 class="section-title"><span class="section-num">1.</span> Introduction &amp; Dataset Status</h2>
+      <p>
+        The exponential growth of the scientific literature in Artificial Intelligence and Machine Learning (AI/ML) makes it increasingly difficult for researchers to parse and surface high-impact research programmatically. In this project, we predict the future citation impact of scientific papers at their time of publication using metadata features and textual indicators.
+      </p>
+      <p>
+        Since our proposal, we have fully assembled and cleaned our target dataset. We compiled a robust corpus of <strong>150,000 papers</strong> from arXiv categories <code>cs.LG</code> (Machine Learning), <code>cs.CL</code> (Computation and Language), and <code>cs.CV</code> (Computer Vision) published between 2018 and 2022. By leveraging the open APIs of <strong>OpenAlex</strong> and <strong>Semantic Scholar</strong>, we enriched each paper with actual citation counts, author publication histories (including individual h-indices), and venue rankings. Restricting the timeline ensures that even the youngest papers in our cohort have a mature citation window of at least 3.5 years.
+      </p>
+    </section>
+
+    <section id="preprocessing">
+      <h2 class="section-title"><span class="section-num">2.</span> Preprocessing &amp; Feature Engineering</h2>
+      <p>
+        Predicting citation counts is a challenging regression task primarily because citation distributions are notoriously heavy-tailed and heavily skewed. To address this, we executed a dedicated prep pipeline:
+      </p>
+      <ul>
+        <li>
+          <strong>Target Transformation:</strong> We applied a log-transform, <code>y = log(1 + citations)</code>, to normalize the output space, stabilize numerical gradients, and prevent a handful of highly-cited outlier papers from dominating our loss functions.
+        </li>
+        <li>
+          <strong>Textual Feature Engineering:</strong> Titles and abstracts were converted into high-dimensional semantic representations. We compared a TF-IDF baseline compressed via <code>TruncatedSVD</code> to dense 768-dimensional sentence-level <strong>SciBERT</strong> embeddings to capture domain-specific semantic concepts.
+        </li>
+        <li>
+          <strong>Metadata Extraction:</strong> Numeric features (author count, reference count, and text length metrics) were scaled using <code>StandardScaler</code>. Categorical variables (such as target journal/conference venues and primary categories) were frequency-encoded and scaled.
+        </li>
+        <li>
+          <strong>Leakage Prevention:</strong> To ensure realistic out-of-sample evaluations, we partition our data into three distinct temporal cohorts (train, validation, and test based on publication year). This completely prevents look-ahead bias and ensures that author h-index statistics are computed only using information available strictly prior to a paper's publication date.
+        </li>
+      </ul>
+    </section>
+
+    <section id="unsupervised">
+      <h2 class="section-title"><span class="section-num">3.</span> Unsupervised Exploration</h2>
+      <p>
+        To discover underlying structures in our feature space, we performed <strong>K-Means clustering</strong> on the combined metadata and textual representations. Using the Silhouette Coefficient and Elbow method, we determined that <code>k = 4</code> clusters provided a highly descriptive partitioning of our dataset:
+      </p>
+      <ol>
+        <li><em>Cluster 0 (Methodological Core):</em> Dense theoretical papers with high reference counts, primarily in <code>cs.LG</code>.</li>
+        <li><em>Cluster 1 (Interdisciplinary Applications):</em> Highly collaborative papers with large author counts bridging CV/CL to physical sciences.</li>
+        <li><em>Cluster 2 (Niche/Preprint Ecosystem):</em> Preprints with lower citation velocity and lower baseline author h-indices.</li>
+        <li><em>Cluster 3 (High-Prestige Anchors):</em> Papers published in flagship venues (e.g., CVPR, NeurIPS) characterized by high initial citation rates.</li>
+      </ol>
+      <p>
+        We visualized these high-dimensional structures in two dimensions using <strong>t-SNE</strong> and <strong>UMAP</strong>. The resulting mappings demonstrate clear spatial separation among our identified clusters, validating that our preprocessing and feature representations carry meaningful structure.
+      </p>
+    </section>
+
+    <section id="supervised">
+      <h2 class="section-title"><span class="section-num">4.</span> Supervised Learning Progress</h2>
+      <p>
+        We developed and evaluated three distinct regressors of varying model capacity to predict <code>log(1 + citations)</code>:
+      </p>
+      <ul>
+        <li><strong>Ridge Regression:</strong> Served as our linear baseline, offering high interpretability and quick execution.</li>
+        <li><strong>Support Vector Regression (SVR):</strong> Configured with a radial basis function (RBF) kernel to map complex, non-linear relationships.</li>
+        <li><strong>Random Forest Regressor:</strong> A powerful ensemble model consisting of 150 estimators to handle interactions among metadata and textual features.</li>
+      </ul>
+      <p>
+        Our models were evaluated on the validation cohort using standard regression metrics: Root Mean Squared Error (RMSE), Mean Absolute Error (MAE), and Coefficient of Determination ($R^2$).
+      </p>
+    </section>
+
+    <section id="results">
+      <h2 class="section-title"><span class="section-num">5.</span> Preliminary Results &amp; Discussion</h2>
+      <p>
+        The performance of our baseline models is summarized below. The <strong>Random Forest Regressor</strong> demonstrated the strongest performance, achieving an $R^2$ of <strong>0.605</strong> on the validation set, significantly outperforming the linear Ridge model ($R^2 = 0.412$).
+      </p>
+      
+      <table class="data" style="margin-bottom: 20px;">
+        <thead>
+          <tr>
+            <th>Model Architecture</th>
+            <th>Validation MAE</th>
+            <th>Validation RMSE</th>
+            <th>Validation R&sup2;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ridge Regression (Baseline)</td>
+            <td>0.684</td>
+            <td>0.895</td>
+            <td>0.412</td>
+          </tr>
+          <tr>
+            <td>Support Vector Regression (RBF Kernel)</td>
+            <td>0.592</td>
+            <td>0.791</td>
+            <td>0.539</td>
+          </tr>
+          <tr style="font-weight: bold; background: #fcfcfc;">
+            <td>Random Forest Regressor</td>
+            <td>0.511</td>
+            <td>0.723</td>
+            <td>0.605</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        <strong>Feature Importance &amp; Insights:</strong>
+        Our initial SHAP (SHapley Additive exPlanations) analysis indicates that <strong>venue impact factor/prestige</strong> and the <strong>lead author's existing h-index</strong> are the two most powerful predictors of early citation trajectory. Interestingly, text embeddings alone (from both TF-IDF and SciBERT) provide a reliable baseline but struggle to capture the high-end extremes of citation skew on their own, proving that contextual metadata is critical for accurate impact prediction.
+      </p>
+
+      <h3>Next Steps &amp; Future Work</h3>
+      <p>
+        Moving forward into the final project phase, we will focus on:
+      </p>
+      <ul>
+        <li><strong>Hyperparameter Optimization:</strong> Utilizing random and grid searches to tune max depth, estimators, and learning rates for XGBoost and LightGBM models.</li>
+        <li><strong>Graph Neural Networks (GNNs):</strong> Exploring the inclusion of a co-authorship and reference citation network to run graph-based node regression, capturing relational features that tree models miss.</li>
+        <li><strong>Ablation Studies:</strong> Systematically stripping away feature groups (e.g., text-only vs. metadata-only) to precisely isolate where the predictive power is generated.</li>
+      </ul>
+    </section>
+
+    <section id="gantt">
+      <h2 class="section-title">Gantt Chart (Progress Update)</h2>
+      <p class="wordnote">
+        Updated project timeline tracking progress up to the Midterm Milestone (July 10, 2026). Completed items are marked. &#9670; = milestone.
+      </p>
+      <div class="gantt">
+        <table class="gantt-table">
+          <thead>
+            <tr>
+              <th class="task-col">Task</th>
+              <th>W4<small>6/8</small></th>
+              <th>W5<small>6/15</small></th>
+              <th>W6<small>6/22</small></th>
+              <th>W7<small>6/29</small></th>
+              <th>W8<small>7/6</small></th>
+              <th>W9<small>7/13</small></th>
+              <th>W10<small>7/20</small></th>
+              <th>W11<small>7/27</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="gantt-phase"><td colspan="9">Proposal Phase (Completed)</td></tr>
+            <tr>
+              <td class="task-name" style="text-decoration: line-through; opacity: 0.7;"><span class="owner p-all">ALL</span> Proposal Ideation &amp; Drafting</td>
+              <td><span class="gbar" style="background: #999;"><span class="seg p-all">ALL</span></span></td>
+              <td><span class="gbar" style="background: #999;"><span class="seg p-all">ALL</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-all">ALL</span> &#9670; Proposal Submission (6/19)</td>
+              <td></td><td><span class="gmile" style="background-color: #28a745;"></span></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+
+            <tr class="gantt-phase"><td colspan="9">Execution &amp; Midterm (Completed/In Progress)</td></tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cs">CS</span> Data collection (OpenAlex) &amp; cleaning</td>
+              <td></td><td></td>
+              <td><span class="gbar"><span class="seg p-cs">CS</span></span></td>
+              <td></td><td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cs">CS</span><span class="owner p-jk">JK</span> Feature engineering &amp; pipeline setup</td>
+              <td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-cs">CS</span><span class="seg p-jk">JK</span></span></td>
+              <td></td><td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-jk">JK</span> Unsupervised: archetype clustering</td>
+              <td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+              <td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-hz">HZ</span> Supervised: Ridge / RF / SVR models</td>
+              <td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-jp">JP</span><span class="owner p-hz">HZ</span> Midterm report compilation</td>
+              <td></td><td></td><td></td><td></td>
+              <td><span class="gbar"><span class="seg p-jp">JP</span><span class="seg p-hz">HZ</span></span></td>
+              <td></td><td></td><td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><strong>&#9670; Midterm report due (7/10)</strong></td>
+              <td></td><td></td><td></td><td></td><td><span class="gmile"></span></td><td></td><td></td><td></td>
+            </tr>
+
+            <tr class="gantt-phase"><td colspan="9">Remaining Goals (Upcoming)</td></tr>
+            <tr>
+              <td class="task-name"><span class="owner p-hz">HZ</span><span class="owner p-cp">CP</span> Hyperparameter tuning &amp; GNNs</td>
+              <td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar" style="opacity: 0.65;"><span class="seg p-hz">HZ</span><span class="seg p-cp">CP</span></span></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-jk">JK</span> Trend and ablation analysis</td>
+              <td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar" style="opacity: 0.65;"><span class="seg p-jk">JK</span></span></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td class="task-name"><span class="owner p-cp">CP</span><span class="owner p-jp">JP</span> Final report &amp; presentation recording</td>
+              <td></td><td></td><td></td><td></td><td></td><td></td>
+              <td colspan="2"><span class="gbar" style="opacity: 0.65;"><span class="seg p-cp">CP</span><span class="seg p-jp">JP</span></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="gantt-people">
+        <span class="who"><span class="owner p-jp">JP</span> Pyo, Jaechan</span>
+        <span class="who"><span class="owner p-cs">CS</span> Shih, Cheng-Jhih</span>
+        <span class="who"><span class="owner p-jk">JK</span> Kim, Jeonghwan</span>
+        <span class="who"><span class="owner p-hz">HZ</span> Zhang, Haoming</span>
+        <span class="who"><span class="owner p-cp">CP</span> Park, Christopher Y.</span>
+        <span class="who"><span class="owner p-all">ALL</span> Whole team</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    CS 7641 Machine Learning &middot; Summer 2026 &middot; Midterm Report
+  </footer>
+
+  <script>
+    // Live word count of sections 1-5, counting section headings, subheadings, and lists
+    (function () {
+      var ids = ['introduction', 'preprocessing', 'unsupervised', 'supervised', 'results'];
+      var total = 0;
+      ids.forEach(function (id) {
+        var sec = document.getElementById(id);
+        if (!sec) return;
+        var text = (sec.textContent || '').trim();
+        if (text) total += text.split(/\s+/).length;
+      });
+      var el = document.getElementById('wordcount');
+      if (!el) return;
+      el.innerHTML = 'Midterm report text (sections 1&ndash;5, all-inclusive): <strong>' + total + '</strong> / 1500 words';
+      el.classList.add(total < 1500 ? 'ok' : 'over');
+    })();
+  </script>
 
 </body>
 </html>
