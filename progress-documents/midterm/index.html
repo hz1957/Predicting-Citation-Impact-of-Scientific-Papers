@@ -185,25 +185,16 @@ Dataset
 </h3>
 
 
-<p>
-We assemble the dataset from open sources requiring no API keys. A HuggingFace
-arXiv corpus provides titles, abstracts, authors, and publication dates. These
-records are enriched with citation counts and affiliations from OpenAlex.
-The dataset focuses on AI/ML categories:
-<code>cs.LG</code>,
-<code>cs.CL</code>,
-and
-<code>cs.CV</code>.
-</p>
-
-
-<p>
-Approximately 50,000 papers published between 2018 and 2022 are sampled so
-that citation counts have sufficient time to mature. Before model development,
-all collected data are transformed into text and metadata feature
-representations to ensure an efficient and leakage-free learning pipeline.
-</p>
-
+We assemble the dataset from open sources requiring no API keys: a HuggingFace
+arXiv corpus (e.g. CShorten/ML-ArXiv-Papers / arxiv-community/arxiv_dataset) provides ti-
+tles, abstracts, authors, and dates with a one-line load_dataset call, which we enrich with citation
+counts and affiliations from OpenAlex [3] (key-free REST API, batched by arXiv ID/DOI). We
+restrict to AI/ML categories (cs.LG, cs.CL, cs.CV) and sample ∼50,000 papers from 2018–2022
+so citations have had time to mature. We also investigate whether the learned predictive signals
+generalize beyond the AI/ML literature. Before model development, the collected data are prepro-
+cessed and transformed into text and metadata feature representations to improve computational
+efficiency and ensure a leakage-free learning pipeline. Details of the preprocessing procedure are
+provided in the Methods section.
 
 <p>
 <strong>Data sources:</strong>
