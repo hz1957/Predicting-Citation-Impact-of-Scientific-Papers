@@ -139,32 +139,19 @@ Yes
 Introduction &amp; Background
 </h2>
 
-
-<p>
-The number of citations a paper accrues is a widely used---if imperfect---proxy
-for scientific influence. Citation dynamics are extremely skewed: in computer
-science, the most-cited 7% of papers collect over half of all citations while
-roughly 21% go uncited. This concentration has intensified as AI publication
-volume has rapidly increased.
-</p>
-
-
-<p>
-With thousands of AI papers posted each month, it becomes difficult to
-determine which research will have long-term influence shortly after
-publication. A predictive model that forecasts citation impact could assist
-researchers, reviewers, and libraries in identifying promising work before
-citations accumulate.
-</p>
-
-
-<p>
-Text-only approaches generally provide limited predictive capability, whereas
-bibliometric and metadata signals available near publication consistently
-provide additional predictive power. In this project, we study citation
-prediction for AI/ML papers and investigate which characteristics drive
-predicted scientific impact.
-</p>
+The number of citations a paper accrues is a widely used—if imperfect—proxy for scientific influ-
+ence [1]. Citation dynamics are extremely skewed: in computer science, the most-cited 7% of papers
+collect over half of all citations while roughly 21% go uncited (Gini ≈ 0.73, Fig. 1) [7]—a concen-
+tration that has only intensified as AI publication volume has surged [2, 6]. With thousands of AI
+papers posted each month, this imbalance makes it hard to tell early on which work will matter;
+a model that forecasts impact at (or shortly after) publication could help researchers, reviewers,
+and libraries surface promising papers before citations accumulate, and reveal which characteristics
+drive attention. Text alone is a relatively weak predictor of impact—the strongest text-based models
+leave most of the variance unexplained [8]—while bibliometric and metadata signals available near
+publication consistently add substantial predictive power [1]. In this project, We study citation
+prediction for AI/ML papers—a fast-moving field with a large, openly catalogued literature—and
+use feature-importance analysis to learn which signals actually drive predicted impact, rather than
+assuming them in advance.
 
 
 
