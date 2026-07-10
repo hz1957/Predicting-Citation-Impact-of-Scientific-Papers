@@ -836,6 +836,59 @@ citation variables are introduced.
 </ul>
 
 
+<section id="k-explorer">
+  <h2 class="section-title">Explorer: how the clustering changes with k</h2>
+  <p>
+    Drag a slider to recolor the maps with that k's K-Means labels. The PCA, UMAP and t-SNE layouts
+    are fixed per feature set (they are computed from the features, independently of k); only the
+    cluster coloring changes. Each feature set is shown in its own embedding. Diagnostic view
+    only: beyond k = 8 the colors leave our validated palette.
+  </p>
+
+  <div id="kx-text_meta" class="kx-block">
+    <h3>Text (LSA) + metadata features <span class="kx-readout"></span></h3>
+    <input type="range" class="kx-slider" style="width:60%">
+    <img class="kx-img" style="width:100%" alt="PCA, UMAP and t-SNE colored by K-Means labels" />
+  </div>
+
+  <div id="kx-text" class="kx-block">
+    <h3>Text (LSA) features only <span class="kx-readout"></span></h3>
+    <input type="range" class="kx-slider" style="width:60%">
+    <img class="kx-img" style="width:100%" alt="PCA, UMAP and t-SNE colored by K-Means labels" />
+  </div>
+
+  <script>
+    (() => {
+      const meta = window.KX_META;  // injected by make_preview.sh
+      if (!meta) {
+        document.getElementById('k-explorer').insertAdjacentHTML('beforeend',
+          '<p><em>Explorer metadata missing — run run_k_explorer.py, then ' +
+          'bash make_preview.sh.</em></p>');
+        return;
+      }
+      for (const [space, info] of Object.entries(meta)) {
+        const block = document.getElementById('kx-' + space);
+        if (!block) continue;
+        const slider = block.querySelector('.kx-slider');
+        const img = block.querySelector('.kx-img');
+        const readout = block.querySelector('.kx-readout');
+        const ks = info.ks;
+        slider.min = 0; slider.max = ks.length - 1; slider.step = 1;
+        const show = i => {
+          const k = ks[i];
+          img.src = 'k_explorer_imgs/' + space + '_k' + k + '.png';
+          readout.textContent = ' — k = ' + k + ' (silhouette ' +
+                                info.silhouette[String(k)] + ')';
+        };
+        slider.addEventListener('input', () => show(+slider.value));
+        // preload for smooth dragging
+        ks.forEach(k => { const im = new Image();
+                          im.src = 'k_explorer_imgs/' + space + '_k' + k + '.png'; });
+        slider.value = 0; show(0);
+      }
+    })();
+  </script>
+</section>
 
 
 <h3>
