@@ -588,6 +588,24 @@ Silhouette coefficient, while PCA, UMAP, and t-SNE were used to visualize the le
 space
 </p>
 
+<figure class="figure">
+
+<img src="../../assets/img/fig_model_selection.png"
+alt="K-means silhouette score comparison">
+
+<figcaption>
+
+Metadata-featured and text-only LSA clustering evaluation.
+The metadata-enhanced representation shows a clear maximum near
+\(k=3\), while text-only clustering exhibits a gradual improvement with
+increasing cluster number.
+
+</figcaption>
+
+</figure>
+
+
+    
 <p>
 Such compares the Silhouette scores obtained with and without metadata. When metadata
 features were incorporated, the score exhibited a clear interior maximum at k = 3, indicating the
@@ -608,22 +626,6 @@ distributed throughout the embedding space. This observation suggests that the s
 representation alone already captures meaningful information related to future citation impact
 </p>
 
-
-<figure class="figure">
-
-<img src="../../assets/img/fig_model_selection.png"
-alt="K-means silhouette score comparison">
-
-<figcaption>
-
-Metadata-featured and text-only LSA clustering evaluation.
-The metadata-enhanced representation shows a clear maximum near
-\(k=3\), while text-only clustering exhibits a gradual improvement with
-increasing cluster number.
-
-</figcaption>
-
-</figure>
 
 
 
