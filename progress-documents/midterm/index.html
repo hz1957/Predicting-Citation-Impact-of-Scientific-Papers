@@ -578,37 +578,35 @@ K-Means Clustering
 
 
 <p>
-The unsupervised learning pipeline investigates whether latent semantic
-representations of research papers naturally form meaningful groups and
-whether these groups exhibit different citation characteristics.
+The unsupervised learning pipeline was designed to investigate whether latent semantic represen-
+tations of research papers naturally form meaningful groups and whether these groups exhibit
+different citation characteristics. Given summarizes the overall workflow. After constructing
+the 100-dimensional LSA representation from TF–IDF features, two different K-Means analyses
+were performed: one using only the text representation and another using the combined text and
+standardized metadata features. Cluster quality was evaluated over multiple values of k using the
+Silhouette coefficient, while PCA, UMAP, and t-SNE were used to visualize the learned feature
+space
 </p>
-
 
 <p>
-After constructing the 100-dimensional LSA representation from TF-IDF
-features, two K-Means analyses were performed:
+Such compares the Silhouette scores obtained with and without metadata. When metadata
+features were incorporated, the score exhibited a clear interior maximum at k = 3, indicating the
+presence of three well-separated coarse groups. In contrast, the text-only representation showed the
+gradual increase in Silhouette score that is commonly observed in high-dimensional text clustering.
+Rather than selecting the largest score, k = 8 was chosen because it provided the finest partition
+in which every cluster remained interpretable and sufficiently populated. Consequently, two com-
+plementary clustering analyses were retained: a coarse three-cluster partition for identifying broad
+research domains and a finer eight-cluster partition for discovering topical impact archetypes.
+    </p>
+    <p>
+To better understand the geometry of the learned feature space, PCA, UMAP, and t-SNE pro-
+jections were generated using the fitted embeddings. Figure 3 illustrates the continuous citation
+distribution in the reduced-dimensional space, where each point is colored by the logarithm of its
+three-year citation count. Although citation information was never used during feature construction
+or clustering, regions containing highly cited papers are visibly concentrated rather than uniformly
+distributed throughout the embedding space. This observation suggests that the semantic text
+representation alone already captures meaningful information related to future citation impact
 </p>
-
-
-<ul>
-
-<li>
-Text representation only.
-</li>
-
-<li>
-Combined text and standardized metadata representation.
-</li>
-
-</ul>
-
-
-<p>
-Cluster quality was evaluated using the Silhouette coefficient over multiple
-values of \(k\). PCA, UMAP, and t-SNE were applied to visualize the learned
-feature space.
-</p>
-
 
 
 <figure class="figure">
