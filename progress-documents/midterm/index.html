@@ -162,7 +162,7 @@ assuming them in advance.
 
 <figcaption>
 
-Lorenz curve of the computer-science citation distribution.
+<strong>Figure 1.</strong> Lorenz curve of the computer-science citation distribution.
 The most-cited 7% of papers collect approximately 50% of citations,
 approximately 21% are uncited, and the Gini coefficient is approximately
 0.73. This concentration motivates a learned prediction model and
@@ -176,7 +176,7 @@ log-transformed citation targets.
 
 <p>
 For this midterm milestone, we focus on establishing a complete, leakage-free machine learning pipeline.
-After preprocessing the dataset and constructing text and metadata representations, we implement one representative unsupervised learning algorithm (K-Means clustering) and two baseline supervised learning models(Ridge Regression and Logistic Regression).
+After preprocessing the dataset and constructing text and metadata representations, we implement one representative unsupervised learning algorithm (K-Means clustering) and two baseline supervised learning models (Ridge Regression and Logistic Regression).
 These baseline models provide an initial evaluation of the predictive capability of the engineered features and establish a foundation for comparison with more advanced machine learning methods in the final project.
 </p>
 
@@ -188,8 +188,7 @@ Dataset
 
 
 We assemble the dataset from open sources requiring no API keys: a HuggingFace
-arXiv corpus (e.g. CShorten/ML-ArXiv-Papers / arxiv-community/arxiv_dataset) provides ti-
-tles, abstracts, authors, and dates with a one-line load_dataset call, which we enrich with citation
+arXiv corpus (e.g. CShorten/ML-ArXiv-Papers / arxiv-community/arxiv_dataset) provides titles, abstracts, authors, and dates with a one-line load_dataset call, which we enrich with citation
 counts and affiliations from OpenAlex [3] (key-free REST API, batched by arXiv ID/DOI). We
 restrict to AI/ML categories (cs.LG, cs.CL, cs.CV) and sample ∼50,000 papers from 2018–2022
 so citations have had time to mature. We also investigate whether the learned predictive signals
@@ -277,6 +276,8 @@ citation systems. Therefore, predictions are interpreted descriptively rather
 than as measures of scientific merit.
 
 </p>
+
+</section>
 
 <section id="methods">
 
@@ -428,8 +429,8 @@ Reason for K-Means Clustering
 <p>
 The proposed methods were selected to provide interpretable baseline models while remaining computationally efficient for a dataset containing approximately 150,000 research papers.
   K-Means was chosen as the primary unsupervised learning algorithm because it scales well to high-dimensional datasets, has relatively low computational complexity, and produces easily interpretable clusters through centroid representations.
-  Since the text features are represented in a latent semantic space after TF--IDF and Truncated Singular Value Decomposition (LSA), Euclidean distance becomes a reasonable similarity measure, making K-Means an appropriate clustering method. 
-  Cluster quality is assessed using the Silhouette coefficient and Davies--Bouldin index, which provide complementary measures of cluster cohesion and separation.
+  Since the text features are represented in a latent semantic space after TF-IDF and Truncated Singular Value Decomposition (LSA), Euclidean distance becomes a reasonable similarity measure, making K-Means an appropriate clustering method. 
+  Cluster quality is assessed using the Silhouette coefficient and Davies-Bouldin index, which provide complementary measures of cluster cohesion and separation.
 </p>
 
   <p>
@@ -451,7 +452,7 @@ measures cluster cohesion and separation.
 </li>
 
 <li>
-<strong>Davies--Bouldin index:</strong>
+<strong>Davies-Bouldin index:</strong>
 evaluates similarity between clusters.
 </li>
 
@@ -590,12 +591,13 @@ K-Means Clustering
 <p>
 The unsupervised learning pipeline was designed to investigate whether latent semantic represen-
 tations of research papers naturally form meaningful groups and whether these groups exhibit
-different citation characteristics. Given summarizes the overall workflow. After constructing
+different citation characteristics. Figure 2 summarizes the model-selection process for both
+feature sets. After constructing
 the 100-dimensional LSA representation from TF–IDF features, two different K-Means analyses
 were performed: one using only the text representation and another using the combined text and
 standardized metadata features. Cluster quality was evaluated over multiple values of k using the
 Silhouette coefficient, while PCA, UMAP, and t-SNE were used to visualize the learned feature
-space
+space.
 </p>
 
 <figure class="figure">
@@ -605,11 +607,11 @@ alt="Silhouette score against number of clusters for text plus metadata features
 
 <figcaption>
 
-(a) With text (LSA) + metadata features
+<strong>Figure 2.</strong> (a) With text (LSA) + metadata features
       the silhouette peaks at k&nbsp;=&nbsp;3, and the clusters match the cs.CV / cs.CL /
       cs.LG-and-other category split. (b) With the same text (LSA) features and no metadata it
       increases monotonically, so k&nbsp;=&nbsp;8 is chosen for interpretability. Both panels share
-      the identical 100-d LSA text block; only the metadata block differs
+      the identical 100-d LSA text block; only the metadata block differs.
 
 </figcaption>
 
@@ -618,7 +620,7 @@ alt="Silhouette score against number of clusters for text plus metadata features
 
     
 <p>
-Such compares the Silhouette scores obtained with and without metadata. When metadata
+Figure 2 compares the Silhouette scores obtained with and without metadata. When metadata
 features were incorporated, the score exhibited a clear interior maximum at k = 3, indicating the
 presence of three well-separated coarse groups. In contrast, the text-only representation showed the
 gradual increase in Silhouette score that is commonly observed in high-dimensional text clustering.
@@ -638,7 +640,7 @@ silhouette instead rises slowly and monotonically with k — typical for text �
 k = 8, the largest k at which every cluster remains interpretable and well populated. This
 second clustering is run independently on the full corpus (not nested inside the k = 3 clusters);
 its clusters mostly split the three category groups further but can also cut across them (e.g. the
-GAN / adversarial cluster spans cs.CV and cs.LG)
+GAN / adversarial cluster spans cs.CV and cs.LG).
      </p>
 
     
@@ -649,7 +651,7 @@ alt="Citation embedding visualization">
 
 <figcaption>
 
-Citation distribution in reduced-dimensional embedding space:
+<strong>Figure 3.</strong> Citation distribution in reduced-dimensional embedding space:
 (a) PCA,
 (b) UMAP,
 (c) t-SNE.
@@ -663,12 +665,12 @@ representations contain information correlated with future citation impact.
     
     <p>
 To better understand the geometry of the learned feature space, PCA, UMAP, and t-SNE pro-
-jections were generated using the fitted embeddings. Mapping illustrates the continuous citation
+jections were generated using the fitted embeddings. Figure 3 illustrates the continuous citation
 distribution in the reduced-dimensional space, where each point is colored by the logarithm of its
 three-year citation count. Although citation information was never used during feature construction
 or clustering, regions containing highly cited papers are visibly concentrated rather than uniformly
 distributed throughout the embedding space. This observation suggests that the semantic text
-representation alone already captures meaningful information related to future citation impact
+representation alone already captures meaningful information related to future citation impact.
 </p>
 
 
@@ -685,7 +687,7 @@ alt="Metadata featured K-means clusters">
 
 <figcaption>
 
-Metadata-featured \(k=3\) K-Means clustering results:
+<strong>Figure 4.</strong> Metadata-featured \(k=3\) K-Means clustering results:
 (a) PCA,
 (b) UMAP,
 (c) t-SNE,
@@ -698,7 +700,7 @@ Metadata-featured \(k=3\) K-Means clustering results:
 </figure>
     
 <p>
-Given feature presents the visualization of the k = 3 clustering using PCA, UMAP, and t-SNE for the
+Figure 4 presents the visualization of the k = 3 clustering using PCA, UMAP, and t-SNE for the
 combined text and metadata representation. All three embedding methods reveal consistent cluster
 boundaries despite preserving different geometric properties. PCA preserves the global variance of
 the feature space, whereas UMAP and t-SNE emphasize local neighborhood relationships. Across
@@ -724,7 +726,7 @@ alt="Text-only K-means clusters">
 
 <figcaption>
 
-(k=8\) K-Means topic archetypes:
+<strong>Figure 5.</strong> \(k=8\) K-Means topic archetypes:
 (a) PCA,
 (b) UMAP,
 (c) t-SNE,
@@ -737,9 +739,9 @@ alt="Text-only K-means clusters">
 
     
 <p>
-For \(k=8\) was selected because it provides
+\(k=8\) was selected because it provides
 a finer partition while maintaining interpretable and sufficiently populated
-clusters. It shows the corresponding visualization for the text-only representation with k = 8. Compared with the coarse partition, the clusters are more diffuse and partially overlap, reflecting the
+clusters. Figure 5 shows the corresponding visualization for the text-only representation with k = 8. Compared with the coarse partition, the clusters are more diffuse and partially overlap, reflecting the
 continuous nature of research topics. Nevertheless, several distinct semantic regions emerge consis-
 tently across PCA, UMAP, and t-SNE. Inspection of the highest-weight TF–IDF terms identifies
 recognizable research themes, including object detection and 3D vision, reinforcement learning,
@@ -888,13 +890,8 @@ citation variables are introduced.
 </section>
 
 
-<h3>
-Regression
-</h3>
-
-
 <section id="supervised">
-  <h2 class="section-title"><span class="section-num">4.</span> Supervised Learning: Baseline Prediction Models</h2>
+  <h3>Supervised Learning: Ridge and Logistic Regression Baselines</h3>
 
   <p>
     For the first supervised milestone, we implemented two deliberately simple baselines from the
@@ -962,10 +959,10 @@ Regression
   </table>
 
   <figure>
-    <img src="../../assets/img/midterm/ridge_pred_vs_true.png"
+    <img src="../../assets/img/ridge_pred_vs_true.png"
          alt="Ridge predicted log citations versus true log citations on the temporal test split" />
     <figcaption>
-      <strong>Figure 5.</strong> Ridge predicted versus true log(1 + citations) on the test split.
+      <strong>Figure 6.</strong> Ridge predicted versus true log(1 + citations) on the test split.
       The model captures broad ordering but compresses predictions toward the mean, which is
       expected for an L2-regularized linear model on heavy-tailed citation data.
     </figcaption>
@@ -1070,19 +1067,19 @@ Regression
   </table>
 
   <figure>
-    <img src="../../assets/img/midterm/logistic_pr_curve.png"
+    <img src="../../assets/img/logistic_pr_curve.png"
          alt="Precision-recall curve for Logistic Regression on the temporal test split" />
     <figcaption>
-      <strong>Figure 6.</strong> Precision-recall curve for the Logistic Regression baseline. The
+      <strong>Figure 7.</strong> Precision-recall curve for the Logistic Regression baseline. The
       PR-AUC of 0.180 is about 3.0 times the 0.059 positive base rate in the test set.
     </figcaption>
   </figure>
 
   <figure>
-    <img src="../../assets/img/midterm/logistic_roc_curve.png"
+    <img src="../../assets/img/logistic_roc_curve.png"
          alt="ROC curve for Logistic Regression on the temporal test split" />
     <figcaption>
-      <strong>Figure 7.</strong> ROC curve for the Logistic Regression baseline. ROC-AUC is 0.773,
+      <strong>Figure 8.</strong> ROC curve for the Logistic Regression baseline. ROC-AUC is 0.773,
       indicating useful discrimination even though the positive class is rare.
     </figcaption>
   </figure>
@@ -1113,17 +1110,21 @@ Regression
   </p>
 </section>
 
-    
-<p>
-Supervised regression experiments evaluate whether engineered features can
-predict future citation impact. Ridge Regression and additional regression
-models are compared using standard regression metrics.
-</p>
 
+<h3>
+Next Steps
+</h3>
 
 <p>
-Results from the regression experiments will be incorporated after completion
-of the final evaluation stage.
+The Ridge and Logistic Regression baselines confirm that the leakage-free text
+and metadata representation carries real predictive signal, but a linear
+model compresses the heavy citation tail and leaves most regression variance
+unexplained. For the final report we will replace these baselines with
+nonlinear models (random forest and XGBoost) and tune their hyperparameters,
+report per-cluster error analysis so performance can be compared across the
+K-Means impact archetypes rather than only globally, and evaluate whether
+graph-based features from citation and collaboration networks improve on the
+current text-and-metadata representation.
 </p>
 
 
@@ -1686,7 +1687,7 @@ Name
 </th>
 
 <th>
-Contribution
+Midterm Contribution
 </th>
 
 </tr>
@@ -1704,8 +1705,9 @@ Shih, Cheng-Jhih
 </td>
 
 <td>
-Problem definition, dataset selection, ethics and sustainability,
-references, proposal writing, and review.
+Data pipeline: arXiv/OpenAlex collection and merging, temporal cohort
+construction (C1/C2/C3), and leakage-free preprocessing of text and
+metadata features.
 </td>
 
 </tr>
@@ -1719,7 +1721,9 @@ Kim, Jeonghwan
 </td>
 
 <td>
-Gantt chart, methodology development, proposal writing, and review.
+Unsupervised learning: K-Means clustering (text-only and text+metadata),
+cluster-count selection, and PCA/UMAP/t-SNE visualizations, including the
+k-explorer tool.
 </td>
 
 </tr>
@@ -1733,7 +1737,7 @@ Park, Christopher Y.
 </td>
 
 <td>
-Presentation development, video creation, recording, and review.
+Midterm report writeup and review.
 </td>
 
 </tr>
@@ -1747,8 +1751,7 @@ Pyo, Jaechan
 </td>
 
 <td>
-Introduction, background research, literature review,
-proposal writing, and review.
+Midterm report writeup and review.
 </td>
 
 </tr>
@@ -1762,8 +1765,9 @@ Zhang, Haoming
 </td>
 
 <td>
-Methods, references, potential results, discussion,
-proposal writing, and review.
+Supervised learning: Ridge and Logistic Regression baselines, evaluation
+metrics (RMSE/MAE/R&sup2;/Spearman, PR-AUC/ROC-AUC), and the cluster-feature
+ablation study.
 </td>
 
 </tr>
@@ -1795,4 +1799,3 @@ Project Proposal
 </body>
 
 </html>
-</section>
