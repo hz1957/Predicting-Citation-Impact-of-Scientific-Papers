@@ -857,15 +857,12 @@ citation variables are introduced.
     <img class="kx-img" style="width:100%" alt="PCA, UMAP and t-SNE colored by K-Means labels" />
   </div>
 
+  <script>window.KX_META = {"text_meta":{"title":"Text (LSA) + metadata features","ks":[2,3,4,5,6,7,8,9,10,11,12],"silhouette":{"2":0.0737,"3":0.1001,"4":0.0943,"5":0.0872,"6":0.08,"7":0.0702,"8":0.0598,"9":0.0571,"10":0.0558,"11":0.0555,"12":0.0539}},"text":{"title":"Text (LSA) features only","ks":[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],"silhouette":{"2":0.0287,"3":0.0335,"4":0.0319,"5":0.0347,"6":0.0354,"7":0.038,"8":0.0385,"9":0.0411,"10":0.0426,"11":0.0431,"12":0.0446,"13":0.0467,"14":0.0485,"15":0.0492,"16":0.0498}}};</script>
+
   <script>
     (() => {
-      const meta = window.KX_META;  // injected by make_preview.sh
-      if (!meta) {
-        document.getElementById('k-explorer').insertAdjacentHTML('beforeend',
-          '<p><em>Explorer metadata missing — run run_k_explorer.py, then ' +
-          'bash make_preview.sh.</em></p>');
-        return;
-      }
+      const meta = window.KX_META;
+      if (!meta) return;
       for (const [space, info] of Object.entries(meta)) {
         const block = document.getElementById('kx-' + space);
         if (!block) continue;
