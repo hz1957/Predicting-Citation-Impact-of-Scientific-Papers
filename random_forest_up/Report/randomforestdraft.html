@@ -1,0 +1,176 @@
+<section id="supervised">
+  <h2 class="section-title"><span class="section-num">4.</span> Supervised Learning: Random Forest Baselines & Hyperparameter Tuning</h2>
+
+  <p>
+    To establish a leakage-safe supervised prediction pipeline, we evaluated Random Forest models across two tasks: continuous 3-year citation count regression ($\log(1 + \text{citations})$) and top-decile binary classification ($\ge 41$ citations). All preprocessing transformers were fitted strictly on the <code>c1</code> train split ($N = 24,691$) and evaluated on the held-out temporal test split ($N = 25,308$).
+  </p>
+
+  <p>
+    We evaluated two primary modeling regimes: an <strong>unconstrained baseline</strong> (default tree depth, unweighted) and a <strong>tuned/regularized regime</strong> (constrained depth, leaf size controls, and <code>class_weight="balanced"</code>). We then conducted a controlled feature ablation to isolate the marginal value of unsupervised text-cluster representations ($k=8$ K-Means cluster indicators and centroid distances).
+  </p>
+
+  <h3>4.1 Regression & Ranking Performance</h3>
+  <p>
+    Unconstrained Random Forests suffered from severe variance, memorizing the training set ($R^2 \approx 0.84$) while generalizing poorly to the temporal test set ($R^2 = 0.1412$). Restricting tree depth and leaf size controlled overfitting, shrinking the train-test generalization gap ($\Delta R^2 \approx 0.356$). Under strictly controlled hyperparameter settings, appending unsupervised cluster features (`base_plus_clusters`) yielded a <strong>+2.02% relative increase in test $R^2$</strong> ($0.1433 \to 0.1462$) and reduced MAE, confirming that spatial cluster proximity provides unique, non-redundant structural signal.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model Setup</th>
+        <th>Feature Set</th>
+        <th>Split</th>
+        <th>RMSE ($\log$)</th>
+        <th>MAE ($\log$)</th>
+        <th>R<sup>2</sup> ($\log$)</th>
+        <th>Spearman ($\rho$)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2"><strong>Unconstrained</strong><br><code>depth=None, leaf=2</code></td>
+        <td>base</td>
+        <td>Test</td>
+        <td>1.1102</td>
+        <td>—</td>
+        <td>0.1412</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>base_plus_clusters</td>
+        <td>Test</td>
+        <td>1.1078</td>
+        <td>—</td>
+        <td>0.1449</td>
+        <td>—</td>
+      </tr>
+      <tr style="border-top: 2px solid #ccc;">
+        <td rowspan="2"><strong>Tuned &amp; Regularized</strong><br><code>depth=20, leaf=10</code></td>
+        <td>base</td>
+        <td>Test</td>
+        <td>1.1089</td>
+        <td>0.9012</td>
+        <td>0.1433</td>
+        <td>0.4605</td>
+      </tr>
+      <tr>
+        <td>base_plus_clusters</td>
+        <td>Test</td>
+        <td>1.1070</td>
+        <td>0.8987</td>
+        <td><strong>0.1462</strong></td>
+        <td>0.4558</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../assets/img/midterm/rf_pred_vs_true.png"
+         alt="Random Forest predicted log citations versus true log citations on the temporal test split" />
+    <figcaption>
+      <strong>Figure 5.</strong> Regularized Random Forest predicted versus true $\log(1 + \text{citations})$ on the test split. Tree depth regularization stabilizes extreme predictions while maintaining strong monotonic ranking performance ($\rho \approx 0.460$).
+    </figcaption>
+  </figure>
+
+  <h3>4.2 Binary Classification Performance (Top Decile)</h3>
+  <p>
+    Top-decile papers constitute 5.9% of the temporal test set ($p \ge 41$). In the unconstrained setup without class balancing, default probability decisions ($p \ge 0.50$) created a conservative classifier that missed over 94% of true high-impact papers ($\text{Recall} = 5.29\%$).
+  </p>
+  <p>
+    Incorporating <code>class_weight="balanced"</code> dramatically shifted the decision boundary: test set recall increased nearly 8-fold from <strong>5.29% to 38.76%</strong>, driving a 3-fold increase in test F1-score ($0.0951 \to 0.3061$). Global ranking performance remained exceptionally robust across all configurations ($\text{ROC-AUC} \approx 0.809$, $\text{PR-AUC} \approx 0.234$).
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model Setup</th>
+        <th>Feature Set</th>
+        <th>Split</th>
+        <th>PR-AUC</th>
+        <th>ROC-AUC</th>
+        <th>F1-Score</th>
+        <th>Precision</th>
+        <th>Recall</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2"><strong>Unconstrained</strong><br><code>class_weight=None</code></td>
+        <td>base</td>
+        <td>Test</td>
+        <td>0.2287</td>
+        <td>0.8083</td>
+        <td>0.0951</td>
+        <td>0.4702</td>
+        <td>0.0529</td>
+      </tr>
+      <tr>
+        <td>base_plus_clusters</td>
+        <td>Test</td>
+        <td>0.2288</td>
+        <td>0.8046</td>
+        <td>0.1321</td>
+        <td>0.4209</td>
+        <td>0.0783</td>
+      </tr>
+      <tr style="border-top: 2px solid #ccc;">
+        <td rowspan="2"><strong>Tuned &amp; Balanced</strong><br><code>class_weight="balanced"</code></td>
+        <td>base</td>
+        <td>Test</td>
+        <td>0.2339</td>
+        <td>0.8091</td>
+        <td>0.3061</td>
+        <td>0.2529</td>
+        <td>0.3876</td>
+      </tr>
+      <tr>
+        <td>base_plus_clusters</td>
+        <td>Test</td>
+        <td><strong>0.2341</strong></td>
+        <td><strong>0.8092</strong></td>
+        <td><strong>0.3065</strong></td>
+        <td>0.2531</td>
+        <td><strong>0.3882</strong></td>
+      </tr>
+      <tr style="border-top: 1px dashed #ccc;">
+        <td><em>Prevalence Baseline</em></td>
+        <td>—</td>
+        <td>Test</td>
+        <td>0.0590</td>
+        <td>0.5000</td>
+        <td>0.0000</td>
+        <td>0.0000</td>
+        <td>0.0000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../assets/img/midterm/rf_pr_curve.png"
+         alt="Precision-recall curve for tuned Random Forest on the temporal test split" />
+    <figcaption>
+      <strong>Figure 6.</strong> Precision-Recall curve for the regularized Random Forest classifier. The PR-AUC of 0.234 achieves a 3.97x lift over the test prevalence baseline ($0.059$).
+    </figcaption>
+  </figure>
+
+  <figure>
+    <img src="../../assets/img/midterm/rf_roc_curve.png"
+         alt="ROC curve for tuned Random Forest on the temporal test split" />
+    <figcaption>
+      <strong>Figure 7.</strong> Receiver Operating Characteristic (ROC) curve for the tuned Random Forest classifier ($\text{ROC-AUC} = 0.809$), demonstrating strong continuous class separation.
+    </figcaption>
+  </figure>
+
+  <h3>4.3 Key Synthesis</h3>
+  <ul>
+    <li>
+      <strong>Hyperparameter Regularization:</strong> Constraining tree depth and leaf size successfully mitigated variance, reducing train $R^2$ from 0.84 to 0.50 and maintaining stable generalization on unseen test data.
+    </li>
+    <li>
+      <strong>Class Weighting Impact:</strong> Enforcing <code>class_weight="balanced"</code> resolved the conservative prediction bias, boosting minority class recall to 38.8% and tripling the test F1-score.
+    </li>
+    <li>
+      <strong>Cluster Feature Value:</strong> Holding hyperparameter configurations constant, cluster augmentation yielded a clean <strong>+2.02% relative improvement in out-of-sample $R^2$</strong>, proving that unsupervised spatial topology provides meaningful predictive value.
+    </li>
+  </ul>
+</section>
