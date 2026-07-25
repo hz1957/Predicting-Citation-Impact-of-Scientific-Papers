@@ -1,0 +1,10 @@
+feature_set,blocks_added,n_features,n_added_features,enriched_work_count,train_enrichment_rate,test_enrichment_rate
+base,none,244,0,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_lsa,full_text_lsa,297,53,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_affiliation_country,full_text_lsa+affiliation_country,815,571,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_venue_identity,full_text_lsa+venue_identity,783,539,49305,0.982706249240614,0.9910305041883989
+base_plus_train_author_reference_history,train_history,270,26,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_history,full_text_lsa+train_history,323,79,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_affiliation_country_history,full_text_lsa+affiliation_country+train_history,841,597,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_venue_identity_history,full_text_lsa+venue_identity+train_history,809,565,49305,0.982706249240614,0.9910305041883989
+base_plus_full_text_affiliation_venue_history,full_text_lsa+affiliation_country+venue_identity+train_history,1327,1083,49305,0.982706249240614,0.9910305041883989
