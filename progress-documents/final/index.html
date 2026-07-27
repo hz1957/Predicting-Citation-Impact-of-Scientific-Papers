@@ -3,54 +3,1378 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Final Report — Predicting Citation Impact of Scientific Papers</title>
+
+  <meta name="description"
+        content="CS 7641 Summer 2026 project Final Report: Predicting Citation Impact of Scientific Papers with K-Means clustering, Ridge regression, Logistic Regression, and Random Forest models." />
+
   <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(','\\)']],
+        displayMath: [['\\[','\\]']]
+      }
+    };
+  </script>
+  <script async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
 </head>
+
 <body>
 
-  <nav class="site-nav">
-    <div class="nav-inner">
-      <span class="brand">Citation<span>Impact</span></span>
-      <div class="links">
-        <a href="../../index.html">Home</a>
-        <a href="../proposal/">Proposal</a>
-        <a href="../midterm/">Midterm</a>
-        <a href="../final/" class="active">Final</a>
-      </div>
-    </div>
-  </nav>
-
-  <header class="hero">
-    <div class="wrap">
-      <h1>Final Report</h1>
-      <p class="subtitle">Predicting Citation Impact of Scientific Papers</p>
-      <p class="meta">CS 7641 Machine Learning &middot; Summer 2026</p>
-    </div>
-  </header>
-
-  <main>
-    <p class="crumb"><a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Final</p>
-
-    <div class="doc-subnav">
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="brand">Citation<span>Impact</span></span>
+    <div class="links">
+      <a href="../../index.html">Home</a>
       <a href="../proposal/">Proposal</a>
       <a href="../midterm/">Midterm</a>
       <a href="../final/" class="active">Final</a>
     </div>
+  </div>
+</nav>
 
-    <div class="placeholder">
-      <div class="big">&#9203;</div>
-      <h2>Final report coming soon</h2>
-      <p>
-        This page will contain the full evaluation, head-to-head model comparison, SHAP and
-        feature-ablation analysis, conclusions, and the project video.
-      </p>
-    </div>
-  </main>
 
-  <footer>
-    CS 7641 Machine Learning &middot; Summer 2026 &middot; Final Report
-  </footer>
+<header class="hero">
+  <div class="wrap">
+    <h1>Predicting Citation Impact of Scientific Papers</h1>
+    <p class="subtitle">
+      A Regression, Ranking and Classification Study with Supervised and Unsupervised Learning
+    </p>
+    <p class="meta">
+      CS 7641 Machine Learning &middot; Summer 2026 &middot; Final Report
+    </p>
+  </div>
+</header>
+
+
+<main>
+
+<p class="crumb">
+  <a href="../../index.html">Home</a> &rsaquo; Progress Documents &rsaquo; Final
+</p>
+
+<div class="doc-subnav">
+  <a href="../proposal/">Proposal</a>
+  <a href="../midterm/">Midterm</a>
+  <a href="../final/" class="active">Final</a>
+</div>
+
+
+<div class="card">
+  <p style="margin:0 0 6px">
+    <strong>Team Members:</strong>
+    Shih, Cheng-Jhih;
+    Kim, Jeonghwan;
+    Park, Christopher Y.;
+    Pyo, Jaechan;
+    Zhang, Haoming
+  </p>
+  <p style="margin:0">
+    <strong>Assigned Mentor:</strong> Alexandra Wu
+    &nbsp;&middot;&nbsp;
+    <strong>Submission Date:</strong> 07/31/2026
+    &nbsp;&middot;&nbsp;
+    <strong>Award opt-in:</strong> Yes
+  </p>
+</div>
+
+
+<!-- ============================================================= -->
+<!-- 1. INTRODUCTION                                                -->
+<!-- ============================================================= -->
+<section id="introduction">
+
+<h2 class="section-title">
+  <span class="section-num">1.</span> Introduction &amp; Background
+</h2>
+
+<p>
+The number of citations a paper accrues is a widely used&mdash;if imperfect&mdash;proxy for
+scientific influence [1]. Citation dynamics are extremely skewed: in computer science, the
+most-cited 7% of papers collect over half of all citations while roughly 21% go uncited
+(Gini&nbsp;&asymp;&nbsp;0.73, Fig.&nbsp;1) [7], a concentration that has only intensified as AI
+publication volume has surged [2, 6]. With thousands of AI papers posted each month, this
+imbalance makes it hard to tell early on which work will matter; a model that forecasts impact at
+(or shortly after) publication could help researchers, reviewers, and libraries surface promising
+papers before citations accumulate, and reveal which characteristics drive attention.
+</p>
+
+<p>
+Prior work sets clear expectations for what is achievable. Text alone is a relatively weak
+predictor of impact&mdash;the strongest text-based models leave most of the variance unexplained
+[8]&mdash;while bibliometric and metadata signals available near publication consistently add
+substantial predictive power [1]. Wang et al. [2] further show that long-term impact is governed
+by a heavy-tailed, partly stochastic process, which bounds how much of the variance any
+publication-time model can recover. Our results below are consistent with all three findings.
+</p>
+
+<figure class="figure">
+  <img src="../../assets/img/citation_skew.png" alt="Citation distribution skew" />
+  <figcaption>
+    <strong>Figure 1.</strong> Lorenz curve of the computer-science citation distribution.
+    The most-cited 7% of papers collect approximately 50% of citations, approximately 21% are
+    uncited, and the Gini coefficient is approximately 0.73. This concentration motivates a
+    learned prediction model and log-transformed citation targets.
+  </figcaption>
+</figure>
+
+<p>
+<strong>What changed since the midterm.</strong> The midterm established a complete, leakage-free
+pipeline with one unsupervised model (K-Means) and two linear supervised baselines (Ridge and
+Logistic Regression). For this final report we added the nonlinear model promised in the midterm
+next-steps section&mdash;a <strong>Random Forest</strong> regressor and classifier&mdash;together
+with <strong>hyperparameter tuning</strong> via randomized search, <strong>permutation feature
+importance</strong>, and a repeat of the <strong>cluster-augmentation ablation</strong> under the
+nonlinear model. This yields a four-model head-to-head comparison on identical splits and metrics
+(Section&nbsp;4.5).
+</p>
+
+<h3>Dataset</h3>
+
+<p>
+We assemble the dataset from open sources requiring no API keys: a HuggingFace arXiv corpus
+(<code>CShorten/ML-ArXiv-Papers</code> / <code>arxiv-community/arxiv_dataset</code>) provides
+titles, abstracts, authors, and dates, which we enrich with citation counts and affiliations from
+OpenAlex [3] (key-free REST API, batched by arXiv ID/DOI). We restrict to AI/ML categories
+(<code>cs.LG</code>, <code>cs.CL</code>, <code>cs.CV</code>) and build three temporal cohorts of
+roughly 50,000 papers each. All modelling in this report uses the <strong>C1</strong> cohort
+(2018&ndash;2022), where citations have had time to mature.
+</p>
+
+<p><strong>Data sources:</strong></p>
+<ul>
+  <li><a href="https://huggingface.co/datasets/CShorten/ML-ArXiv-Papers" target="_blank" rel="noopener">HuggingFace ML-ArXiv Papers Dataset</a></li>
+  <li><a href="https://openalex.org" target="_blank" rel="noopener">OpenAlex Scholarly Database</a></li>
+</ul>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- 2. PROBLEM DEFINITION                                          -->
+<!-- ============================================================= -->
+<section id="problem">
+
+<h2 class="section-title">
+  <span class="section-num">2.</span> Problem Definition
+</h2>
+
+<p>
+<strong>Problem.</strong> Given only features describing a scientific paper that are available
+<em>at publication time</em> (title, abstract, primary category, author count, reference count,
+venue frequency, affiliation and country counts, document lengths, and year), predict its
+fixed-window citation count. We study three linked formulations:
+</p>
+
+<ul>
+  <li>
+    <strong>Regression</strong> &mdash; predict \(y=\log(1+\text{3-year citations})\).
+  </li>
+  <li>
+    <strong>Ranking</strong> &mdash; order papers by predicted impact and evaluate the quality of
+    the top 10% shortlist. This matches the practical use case: surfacing a small candidate set,
+    not estimating an exact count.
+  </li>
+  <li>
+    <strong>Binary classification</strong> &mdash; predict whether a paper becomes
+    <em>highly cited</em>, defined by the train-split top-decile threshold of
+    <strong>&ge;&nbsp;41</strong> citations within 3 years.
+  </li>
+</ul>
+
+<p>
+<strong>Motivation.</strong> Reliable early estimates of scientific impact could help researchers,
+libraries, and reviewers prioritize a rapidly growing literature, and feature-importance analysis
+reveals which characteristics are associated with eventual citation outcomes. Because the
+underlying labels encode known social biases, we treat predictions descriptively rather than as
+measures of scientific merit (Section&nbsp;4.7).
+</p>
+
+<p>
+<strong>Why a learned solution is needed.</strong> The target is heavy-tailed, the useful signal is
+spread across heterogeneous modalities (free text plus tabular metadata), and the deployment
+setting is a temporal one&mdash;models must be fit on past papers and applied to future ones. No
+single hand-written rule covers this; the interesting question is how much publication-time signal
+exists at all, and which model class extracts it best.
+</p>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- 3. METHODS                                                     -->
+<!-- ============================================================= -->
+<section id="methods">
+
+<h2 class="section-title">
+  <span class="section-num">3.</span> Methods
+</h2>
+
+<h3>3.1 Data and temporal split</h3>
+
+<p>
+The corpus consists of approximately 150,000 AI/ML papers from arXiv categories
+<code>cs.LG</code>, <code>cs.CL</code>, and <code>cs.CV</code>, divided into three temporal
+cohorts. All experiments in this report use the <strong>C1</strong> cohort with a strict temporal
+split: papers published in <strong>2018&ndash;2020 form the training split (24,691 papers)</strong>
+and papers published in <strong>2021&ndash;2022 form the held-out test split (25,308
+papers)</strong>. Training on the past and testing on the future is the realistic deployment
+setting and prevents information from future papers leaking backwards.
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Cohort</th><th>Years</th><th>Papers</th><th>Target</th><th>Role in this report</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>C1</td><td>2018&ndash;2022</td><td>49,999</td><td>Citations within first 3 years</td><td><strong>All training and evaluation</strong></td></tr>
+    <tr><td>C2</td><td>2023&ndash;2024</td><td>50,000</td><td>Citations within first 1 year</td><td>Reserved (generalization)</td></tr>
+    <tr><td>C3</td><td>2025&ndash;2026</td><td>49,974</td><td>Citations to date</td><td>Reserved (forecasting)</td></tr>
+  </tbody>
+</table>
+
+<p class="wordnote">
+C2 and C3 were held in reserve for a cross-cohort generalization study; see Section&nbsp;5 for why
+that study was not completed.
+</p>
+
+<h3>3.2 Data preprocessing methods</h3>
+
+<p>Five preprocessing steps produce the 244-dimensional feature matrix used by every model:</p>
+
+<ol>
+  <li>
+    <strong>Target transformation.</strong> Citation counts are heavy-tailed, so the regression
+    target is \(y=\log(1+\text{target\_citations})\). Without this, squared-error losses are
+    dominated by a handful of mega-cited papers.
+  </li>
+  <li>
+    <strong>TF-IDF vectorization of text.</strong> Title and abstract are concatenated and
+    vectorized with sublinear term frequency, English stop-word removal, accent stripping, and
+    <code>min_df&nbsp;=&nbsp;5</code>, producing 13,775 terms.
+  </li>
+  <li>
+    <strong>Dimensionality reduction (LSA).</strong> The sparse TF-IDF matrix is compressed to
+    <strong>100 dimensions</strong> with randomized Truncated SVD and L2-normalized. This makes
+    the text block dense and small enough for tree ensembles and equalizes its scale against the
+    metadata block.
+  </li>
+  <li>
+    <strong>Metadata scaling and encoding.</strong> Skewed count features
+    (<code>author_count</code>, <code>reference_count</code>, <code>venue_freq</code>) receive a
+    <code>log1p</code> transform; all nine numeric metadata fields are then standardized with
+    <code>StandardScaler</code>. The <code>primary_category</code> field is one-hot encoded with
+    <code>handle_unknown="ignore"</code>.
+  </li>
+  <li>
+    <strong>Leakage control.</strong> Every learned transformer (TF-IDF vocabulary, SVD basis,
+    scaler statistics, one-hot vocabulary) is <em>fit on the 2018&ndash;2020 training split only</em>
+    and then applied unchanged to the 2021&ndash;2022 test split. No citation-derived variable is
+    ever used as an input feature.
+  </li>
+</ol>
+
+<p>
+The resulting matrix has <strong>244 features</strong>: 100 LSA text dimensions, 9 numeric
+metadata fields, and 135 primary-category indicators.
+</p>
+
+<h3>3.3 Unsupervised learning: K-Means clustering</h3>
+
+<p>
+K-Means is run on the C1 training split to discover latent topic structure and citation-impact
+archetypes. Two analyses are conducted with the <em>same</em> 100-d LSA text block: one with the
+standardized metadata block concatenated, and one on text features alone. The number of clusters
+is selected with the <strong>Silhouette coefficient</strong> and the <strong>Davies&ndash;Bouldin
+index</strong>; PCA, UMAP, and t-SNE are used to visualize the learned structure. Citation
+outcomes are used only to <em>profile</em> clusters after the fact&mdash;never as clustering
+features.
+</p>
+
+<p>
+<strong>Why K-Means.</strong> It scales to tens of thousands of high-dimensional vectors at low
+computational cost and yields directly interpretable centroids. Because the text lives in an
+L2-normalized latent semantic space after TF-IDF and SVD, Euclidean distance is a reasonable
+similarity measure, which is precisely the assumption K-Means makes. The three projection methods
+are complementary: PCA preserves global variance linearly, UMAP preserves local and global
+neighborhood structure at scale, and t-SNE resolves local cluster organization; agreement across
+all three is a robustness check rather than an artifact of one embedding.
+</p>
+
+<h3>3.4 Supervised learning: three model families</h3>
+
+<p>
+Three supervised model families are trained on the identical feature matrix and identical split,
+so all reported differences are attributable to the model rather than to the data.
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Task</th><th>Settings</th><th>Role</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Ridge Regression</strong></td>
+      <td>Regression / ranking</td>
+      <td><code>alpha = 1.0</code>, target <code>log(1 + citations)</code></td>
+      <td>Linear baseline</td>
+    </tr>
+    <tr>
+      <td><strong>Logistic Regression</strong></td>
+      <td>Binary classification</td>
+      <td><code>C = 1.0</code>, <code>class_weight = "balanced"</code>, <code>max_iter = 2000</code>, decision threshold <code>p &ge; 0.5</code></td>
+      <td>Linear baseline</td>
+    </tr>
+    <tr>
+      <td><strong>Random Forest Regressor</strong></td>
+      <td>Regression / ranking</td>
+      <td>Untuned: <code>n_estimators = 500</code>, <code>max_depth = None</code>, <code>min_samples_leaf = 2</code>, <code>max_features = "sqrt"</code><br />
+          Tuned: <code>n_estimators = 300</code>, <code>max_depth = 20</code>, <code>min_samples_leaf = 10</code>, <code>max_features = "sqrt"</code></td>
+      <td>Nonlinear model</td>
+    </tr>
+    <tr>
+      <td><strong>Random Forest Classifier</strong></td>
+      <td>Binary classification</td>
+      <td>Same depth/leaf settings; tuned variant adds <code>class_weight = "balanced"</code></td>
+      <td>Nonlinear model</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Why these models.</strong> Ridge and Logistic Regression are the natural first choice for a
+high-dimensional, partly sparse representation: L2 regularization controls variance, and the
+coefficients are directly readable. They answer the question &ldquo;how much signal is linearly
+accessible?&rdquo; Random Forest then answers &ldquo;how much more is available nonlinearly?&rdquo;
+Bagged trees capture interactions (e.g. reference count mattering differently inside vision versus
+theory topics) and thresholds without manual feature crossing, are insensitive to feature scaling,
+and supply impurity- and permutation-based importances [4, 5]. Contrasting a strictly linear
+family against a strictly nonlinear one on identical inputs isolates model capacity as the only
+varying factor.
+</p>
+
+<p>
+<strong>Hyperparameter tuning.</strong> The Random Forest configuration was selected with
+<code>RandomizedSearchCV</code> over <code>n_estimators</code>, <code>max_depth</code>,
+<code>min_samples_split</code>, <code>min_samples_leaf</code>, <code>max_features</code>, and (for
+the classifier) <code>class_weight</code>, using 5-fold cross-validation <em>within the training
+split</em>, scored on negative RMSE for regression and ROC-AUC for classification. We report both
+the untuned and tuned models because the comparison is itself informative
+(Section&nbsp;4.4).
+</p>
+
+<h3>3.5 Transferring unsupervised structure into the supervised models</h3>
+
+<p>
+To test whether the unsupervised stage contributes anything the supervised features do not already
+contain, the fitted <strong>text-only \(k=8\)</strong> K-Means model is exported and used to
+augment the supervised matrices with two feature groups: <strong>cluster-id one-hot
+indicators</strong> (8 columns) and <strong>distances to all eight centroids</strong> (8 columns),
+expanding the matrix from 244 to <strong>260</strong> features. The K-Means model, the TF-IDF
+vectorizer, and the LSA transformer are all reused from the training-split fit, so no test
+information enters the pipeline. This ablation is run for both the linear baselines and the
+Random Forest.
+</p>
+
+<h3>3.6 Evaluation metrics</h3>
+
+<ul>
+  <li><strong>Regression:</strong> RMSE, MAE, and \(R^2\) on the log target, plus Spearman \(\rho\) for rank consistency.</li>
+  <li><strong>Ranking:</strong> Precision@10%, Recall@10%, NDCG@10%, and Lift@10% against the top-decile threshold.</li>
+  <li><strong>Classification:</strong> PR-AUC (the primary metric under 5.9% prevalence), ROC-AUC, F1, precision, recall, and accuracy, all against a prevalence baseline.</li>
+  <li><strong>Clustering:</strong> Silhouette coefficient and Davies&ndash;Bouldin index.</li>
+</ul>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- 4. RESULTS & DISCUSSION                                        -->
+<!-- ============================================================= -->
+<section id="results">
+
+<h2 class="section-title">
+  <span class="section-num">4.</span> Results &amp; Discussion
+</h2>
+
+
+<!-- ---------------- 4.1 unsupervised ---------------- -->
+<h3>4.1 Unsupervised: K-Means impact archetypes</h3>
+
+<p>
+The unsupervised stage asks whether latent semantic representations of papers form meaningful
+groups, and whether those groups differ in citation behaviour. Figure&nbsp;2 summarizes model
+selection for both feature sets.
+</p>
+
+<figure class="figure">
+  <img src="../../assets/img/fig_model_selection.png"
+       alt="Silhouette score against number of clusters for text plus metadata features (peak at k = 3) and the same text features alone (monotone increase, k = 8 chosen)" />
+  <figcaption>
+    <strong>Figure 2.</strong> (a) With text (LSA) + metadata features the silhouette peaks at
+    k&nbsp;=&nbsp;3, and the clusters match the cs.CV / cs.CL / cs.LG-and-other category split.
+    (b) With the same text (LSA) features and no metadata it increases monotonically, so
+    k&nbsp;=&nbsp;8 is chosen for interpretability. Both panels share the identical 100-d LSA text
+    block; only the metadata block differs.
+  </figcaption>
+</figure>
+
+<p>
+With metadata included the silhouette has a clear interior maximum at \(k=3\)
+(\(s=0.100\)), and the three clusters recover the arXiv category split almost exactly
+(99.9% cs.CV, 100% cs.CL, and the remaining cs.LG mass) without ever seeing category labels.
+On the text-only representation the silhouette rises slowly and monotonically with \(k\), which is
+typical of high-dimensional text; rather than chasing the largest score we fixed \(k=8\), the
+finest partition at which every cluster stayed interpretable and well populated. Both partitions
+are retained: a coarse one for research domains and a finer one for topical impact archetypes.
+</p>
+
+<figure class="figure">
+  <img src="../../assets/img/fig_citation_map.png" alt="Citation embedding visualization" />
+  <figcaption>
+    <strong>Figure 3.</strong> Citation distribution in reduced-dimensional embedding space:
+    (a) PCA, (b) UMAP, (c) t-SNE. Points are colored by log 3-year citations. Highly cited papers
+    concentrate in specific regions rather than spreading uniformly, even though citation
+    information was never used to build the embedding.
+  </figcaption>
+</figure>
+
+<figure class="figure">
+  <img src="../../assets/img/fig_clusters_text_meta.png" alt="Metadata-featured K-means clusters" />
+  <figcaption>
+    <strong>Figure 4.</strong> Text + metadata \(k=3\) K-Means results:
+    (a) PCA, (b) UMAP, (c) t-SNE, (d) median 3-year citations,
+    (e) share of papers in the corpus-wide top decile per cluster (line = 10% base rate).
+  </figcaption>
+</figure>
+
+<figure class="figure">
+  <img src="../../assets/img/fig_clusters_text.png" alt="Text-only K-means clusters" />
+  <figcaption>
+    <strong>Figure 5.</strong> Text-only \(k=8\) K-Means topic archetypes:
+    (a) PCA, (b) UMAP, (c) t-SNE, (d) median citations, (e) top-decile citation fraction.
+  </figcaption>
+</figure>
+
+<p>
+The eight text-only clusters are cleanly topical, with names assigned by hand from each cluster's
+highest-weight TF-IDF terms, and they separate sharply by citation outcome:
+</p>
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Cluster</th><th>Archetype</th><th>Papers</th>
+      <th>Median 3-yr citations</th><th>Top-decile share</th><th>Uncited share</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>C0</td><td>3D &amp; object detection</td><td>3,496</td><td>7.0</td><td>16.0%</td><td>9.8%</td></tr>
+    <tr><td>C6</td><td>Image segmentation</td><td>2,849</td><td>6.0</td><td>11.8%</td><td>12.2%</td></tr>
+    <tr><td>C7</td><td>NLP &amp; speech</td><td>4,030</td><td>6.0</td><td>11.3%</td><td>11.1%</td></tr>
+    <tr><td>C5</td><td>GANs &amp; adversarial</td><td>1,452</td><td>6.0</td><td>10.8%</td><td>9.8%</td></tr>
+    <tr><td>C4</td><td>Deep architectures</td><td>3,436</td><td>6.0</td><td>10.1%</td><td>11.3%</td></tr>
+    <tr><td>C2</td><td>Applied ML &amp; prediction</td><td>4,714</td><td>4.0</td><td>8.7%</td><td>13.6%</td></tr>
+    <tr><td>C1</td><td>Reinforcement learning</td><td>1,422</td><td>4.5</td><td>7.2%</td><td>11.5%</td></tr>
+    <tr><td>C3</td><td>Optimization &amp; theory</td><td>3,292</td><td>3.0</td><td>4.0%</td><td>16.2%</td></tr>
+  </tbody>
+</table>
+
+<p>
+The spread is large: a paper in the 3D &amp; object detection archetype is <strong>four times</strong>
+as likely to reach the corpus top decile as one in optimization &amp; theory (16.0% vs 4.0%). NLP is
+the heavy-tail archetype&mdash;mean 47.6 versus median 6 citations, reflecting a few transformer-era
+mega-hits&mdash;which independently justifies the log-transformed target. Metadata profiles add
+texture: theory papers have markedly fewer authors (\(z=-0.40\)), vision papers more, and NLP
+abstracts are shorter (\(z=-0.31\)). UMAP and t-SNE agree on the same topical islands while linear
+PCA shows the same gradient with heavy overlap, so the structure is a property of the feature space
+rather than of one projection method.
+</p>
+
+<p>
+<strong>Takeaway for the supervised stage:</strong> topic membership alone carries impact
+information, obtained without any citation label. Section&nbsp;4.6 tests whether handing that
+information to the supervised models as explicit features actually helps.
+</p>
+
+
+<!-- ---------------- 4.2 k explorer ---------------- -->
+<h3>4.2 Explorer: how the clustering changes with \(k\)</h3>
+
+<p>
+Drag a slider to recolor the maps with that \(k\)'s K-Means labels. The PCA, UMAP and t-SNE
+layouts are fixed per feature set (they are computed from the features, independently of \(k\));
+only the cluster coloring changes. Diagnostic view only: beyond \(k=8\) the colors leave our
+validated palette.
+</p>
+
+<div id="kx-text_meta" class="kx-block">
+  <h3>Text (LSA) + metadata features <span class="kx-readout"></span></h3>
+  <input type="range" class="kx-slider" style="width:60%">
+  <img class="kx-img" style="width:100%" alt="PCA, UMAP and t-SNE colored by K-Means labels" />
+</div>
+
+<div id="kx-text" class="kx-block">
+  <h3>Text (LSA) features only <span class="kx-readout"></span></h3>
+  <input type="range" class="kx-slider" style="width:60%">
+  <img class="kx-img" style="width:100%" alt="PCA, UMAP and t-SNE colored by K-Means labels" />
+</div>
+
+<script>window.KX_META = {"text_meta":{"title":"Text (LSA) + metadata features","ks":[2,3,4,5,6,7,8,9,10,11,12],"silhouette":{"2":0.0737,"3":0.1001,"4":0.0943,"5":0.0872,"6":0.08,"7":0.0702,"8":0.0598,"9":0.0571,"10":0.0558,"11":0.0555,"12":0.0539}},"text":{"title":"Text (LSA) features only","ks":[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],"silhouette":{"2":0.0287,"3":0.0335,"4":0.0319,"5":0.0347,"6":0.0354,"7":0.038,"8":0.0385,"9":0.0411,"10":0.0426,"11":0.0431,"12":0.0446,"13":0.0467,"14":0.0485,"15":0.0492,"16":0.0498}}};</script>
+
+<script>
+  (() => {
+    const meta = window.KX_META;
+    if (!meta) return;
+    for (const [space, info] of Object.entries(meta)) {
+      const block = document.getElementById('kx-' + space);
+      if (!block) continue;
+      const slider = block.querySelector('.kx-slider');
+      const img = block.querySelector('.kx-img');
+      const readout = block.querySelector('.kx-readout');
+      const ks = info.ks;
+      slider.min = 0; slider.max = ks.length - 1; slider.step = 1;
+      const show = i => {
+        const k = ks[i];
+        img.src = '../../k_explorer_imgs/' + space + '_k' + k + '.png';
+        readout.textContent = ' — k = ' + k + ' (silhouette ' +
+                              info.silhouette[String(k)] + ')';
+      };
+      slider.addEventListener('input', () => show(+slider.value));
+      ks.forEach(k => { const im = new Image();
+                        im.src = '../../k_explorer_imgs/' + space + '_k' + k + '.png'; });
+      slider.value = 0; show(0);
+    }
+  })();
+</script>
+
+
+<!-- ---------------- 4.3 linear baselines ---------------- -->
+<h3>4.3 Supervised baselines: Ridge and Logistic Regression</h3>
+
+<p>
+Ridge regression predicts \(\log(1+\text{3-year citations})\); Logistic Regression predicts the
+top-decile label. Both are fit on the 2018&ndash;2020 split and evaluated on the held-out
+2021&ndash;2022 split.
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Split</th><th>RMSE</th><th>MAE</th><th>R<sup>2</sup></th><th>Spearman \(\rho\)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Ridge</td><td>Train</td><td>1.193</td><td>0.956</td><td>0.179</td><td>0.411</td></tr>
+    <tr><td>Ridge</td><td>Test</td><td>1.111</td><td>0.880</td><td>0.141</td><td>0.395</td></tr>
+  </tbody>
+</table>
+
+<p>
+The modest \(R^2=0.141\) shows that exact citation counts are hard to predict with a linear model
+on heavy-tailed data, but the gap between train and test \(R^2\) is only 0.038, so Ridge is
+essentially unbiased-by-variance: it is limited by capacity, not by overfitting. The Spearman
+correlation of 0.395 confirms the model is far more useful as a <em>ranking</em> signal than as a
+point estimator&mdash;which is exactly how we evaluate it next.
+</p>
+
+<figure class="figure">
+  <img src="../../assets/img/ridge_pred_vs_true.png"
+       alt="Ridge predicted log citations versus true log citations on the temporal test split" />
+  <figcaption>
+    <strong>Figure 6.</strong> Ridge predicted versus true \(\log(1+\text{citations})\) on the test
+    split. The model captures broad ordering but compresses predictions toward the mean, the
+    expected behaviour of an L2-regularized linear model on heavy-tailed targets.
+  </figcaption>
+</figure>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Split</th><th>Precision@10%</th><th>Recall@10%</th><th>NDCG@10%</th><th>Lift@10%</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Ridge</td><td>Train</td><td>0.297</td><td>0.294</td><td>0.655</td><td>2.94&times;</td></tr>
+    <tr><td>Ridge</td><td>Test</td><td>0.200</td><td>0.339</td><td>0.633</td><td>3.39&times;</td></tr>
+  </tbody>
+</table>
+
+<p>
+Ranking the test set by Ridge score, the top 10% shortlist is 20.0% highly-cited papers against a
+5.9% base rate&mdash;a <strong>3.39&times; lift</strong>&mdash;and recovers 33.9% of all highly
+cited papers. This is the first evidence that publication-time features carry real, actionable
+signal.
+</p>
+
+<p>
+<strong>Classification.</strong> Under the fixed train-derived threshold (&ge;&nbsp;41 citations),
+the temporal test set is harder than the training set: only <strong>5.9%</strong> of test papers are
+positive versus 10.1% in training, because the 2021&ndash;2022 papers have had less time to
+accumulate citations. Logistic Regression reaches ROC-AUC&nbsp;=&nbsp;0.773 and
+PR-AUC&nbsp;=&nbsp;0.180, roughly 3.0&times; the 0.059 prevalence floor.
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Split</th><th>PR-AUC</th><th>ROC-AUC</th><th>F1</th><th>Precision</th><th>Recall</th><th>Accuracy</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Logistic Regression</td><td>Train</td><td>0.263</td><td>0.771</td><td>0.316</td><td>0.202</td><td>0.719</td><td>0.684</td></tr>
+    <tr><td>Logistic Regression</td><td>Test</td><td>0.180</td><td>0.773</td><td>0.255</td><td>0.169</td><td>0.522</td><td>0.820</td></tr>
+    <tr><td>Prevalence baseline</td><td>Test</td><td>0.059</td><td>0.500</td><td>0.000</td><td>0.000</td><td>0.000</td><td>0.941</td></tr>
+  </tbody>
+</table>
+
+<figure class="figure">
+  <img src="../../assets/img/logistic_pr_curve.png"
+       alt="Precision-recall curve for Logistic Regression on the temporal test split" />
+  <figcaption>
+    <strong>Figure 7.</strong> Precision&ndash;recall curve for the Logistic Regression baseline.
+    PR-AUC of 0.180 is about 3.0&times; the 0.059 positive base rate.
+  </figcaption>
+</figure>
+
+<figure class="figure">
+  <img src="../../assets/img/logistic_roc_curve.png"
+       alt="ROC curve for Logistic Regression on the temporal test split" />
+  <figcaption>
+    <strong>Figure 8.</strong> ROC curve for the Logistic Regression baseline
+    (ROC-AUC&nbsp;=&nbsp;0.773), showing useful discrimination despite a rare positive class.
+  </figcaption>
+</figure>
+
+<p>
+Note the accuracy column: the prevalence baseline scores <strong>0.941</strong> accuracy by
+predicting &ldquo;never highly cited,&rdquo; while the useful Logistic model scores 0.820. Accuracy
+is actively misleading at 5.9% prevalence, which is why PR-AUC and the ranking metrics are our
+primary criteria throughout.
+</p>
+
+
+<!-- ---------------- 4.4 random forest ---------------- -->
+<h3>4.4 Random Forest and hyperparameter tuning</h3>
+
+<p>
+Random Forest was added to test whether nonlinear structure&mdash;thresholds and
+interactions&mdash;recovers signal the linear baselines miss. We report an untuned configuration
+(unconstrained depth) and a tuned configuration (<code>max_depth&nbsp;=&nbsp;20</code>,
+<code>min_samples_leaf&nbsp;=&nbsp;10</code>) selected by randomized search, because the contrast
+between them is the clearest illustration of the bias&ndash;variance problem in this dataset.
+</p>
+
+<h4>Regression</h4>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Split</th><th>Feature set</th><th>RMSE</th><th>MAE</th><th>R<sup>2</sup></th><th>Spearman \(\rho\)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>RF (untuned)</td><td>Train</td><td>Base</td><td>0.5196</td><td>0.4076</td><td>0.8443</td><td>0.9851</td></tr>
+    <tr><td>RF (untuned)</td><td>Test</td><td>Base</td><td>1.1082</td><td>0.8995</td><td>0.1444</td><td>0.4578</td></tr>
+    <tr><td>RF (untuned)</td><td>Test</td><td>Base + clusters</td><td>1.1057</td><td>0.8967</td><td><strong>0.1483</strong></td><td>0.4572</td></tr>
+    <tr><td>RF (tuned)</td><td>Train</td><td>Base</td><td>0.9314</td><td>0.7456</td><td>0.4997</td><td>0.8605</td></tr>
+    <tr><td>RF (tuned)</td><td>Test</td><td>Base</td><td>1.1089</td><td>0.9012</td><td>0.1433</td><td><strong>0.4605</strong></td></tr>
+    <tr><td>RF (tuned)</td><td>Test</td><td>Base + clusters</td><td>1.1070</td><td>0.8987</td><td>0.1462</td><td>0.4558</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Variance control works, but does not buy accuracy.</strong> The untuned forest memorizes the
+training split (\(R^2 = 0.844\) train versus 0.144 test, a gap of 0.70). Constraining depth and leaf
+size cuts training \(R^2\) almost in half, to 0.500&mdash;yet <em>test</em> \(R^2\) is essentially
+unchanged (0.1433 vs 0.1444). This is the single most informative result in the study: the residual
+error is not variance that regularization can remove. It is a combination of irreducible noise in
+the citation process [2] and distribution shift between 2018&ndash;2020 training papers and
+2021&ndash;2022 test papers.
+</p>
+
+<p>
+<strong>Where the forest does win is ranking.</strong> Spearman \(\rho\) rises from 0.395 (Ridge) to
+0.4605 (tuned RF), a <strong>+16.6% relative improvement</strong> in rank consistency, even though
+\(R^2\) is nearly identical. Nonlinear structure improves the <em>ordering</em> of papers much more
+than it improves point estimates&mdash;which matters, because ordering is the deployment use case.
+</p>
+
+<figure class="figure">
+  <img src="../../assets/img/rf_pred_vs_true.png"
+       alt="Random Forest predicted versus true log citations on the temporal test split" />
+  <figcaption>
+    <strong>Figure 9.</strong> Predicted versus true \(\log(1+\text{citations})\) for the tuned
+    Random Forest on the temporal test split. Predictions concentrate near the mean citation range,
+    the variance compression typical of averaging-based estimators on heavy-tailed targets.
+  </figcaption>
+</figure>
+
+<figure class="figure">
+  <img src="../../assets/img/rf_residuals.png"
+       alt="Random Forest residual distribution on the temporal test split" />
+  <figcaption>
+    <strong>Figure 10.</strong> Residual distribution for the tuned Random Forest. The right skew
+    confirms the model systematically <em>under</em>-predicts the highly cited tail while fitting
+    the bulk of ordinary papers well.
+  </figcaption>
+</figure>
+
+<h4>Ranking</h4>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Split</th><th>Feature set</th><th>Precision@10%</th><th>Recall@10%</th><th>NDCG@10%</th><th>Lift@10%</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>RF (untuned)</td><td>Train</td><td>Base</td><td>0.8992</td><td>0.8888</td><td>0.9896</td><td>8.88&times;</td></tr>
+    <tr><td>RF (untuned)</td><td>Test</td><td>Base</td><td>0.2363</td><td>0.4003</td><td>0.6664</td><td>4.00&times;</td></tr>
+    <tr><td>RF (untuned)</td><td>Test</td><td>Base + clusters</td><td>0.2442</td><td>0.4137</td><td>0.6719</td><td>4.14&times;</td></tr>
+    <tr><td>RF (tuned)</td><td>Train</td><td>Base</td><td>0.6769</td><td>0.6691</td><td>0.9269</td><td>6.69&times;</td></tr>
+    <tr><td>RF (tuned)</td><td>Test</td><td>Base</td><td><strong>0.2469</strong></td><td><strong>0.4183</strong></td><td><strong>0.6732</strong></td><td><strong>4.18&times;</strong></td></tr>
+    <tr><td>RF (tuned)</td><td>Test</td><td>Base + clusters</td><td>0.2402</td><td>0.4070</td><td>0.6707</td><td>4.07&times;</td></tr>
+  </tbody>
+</table>
+
+<p>
+The tuned Random Forest is the best ranker in the study: its top-10% shortlist is 24.7% highly
+cited papers against a 5.9% base rate (<strong>4.18&times; lift</strong>) and captures 41.8% of all
+highly cited test papers, versus 3.39&times; and 33.9% for Ridge. In practical terms, screening the
+same 2,531-paper shortlist surfaces roughly <strong>118 additional high-impact papers</strong>
+compared with the linear baseline.
+</p>
+
+<h4>Classification</h4>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Split</th><th>Feature set</th><th>PR-AUC</th><th>ROC-AUC</th><th>F1</th><th>Precision</th><th>Recall</th><th>Accuracy</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>RF (untuned)</td><td>Train</td><td>Base</td><td>1.0000</td><td>1.0000</td><td>1.0000</td><td>1.0000</td><td>1.0000</td><td>1.0000</td></tr>
+    <tr><td>RF (untuned)</td><td>Test</td><td>Base</td><td>0.2287</td><td>0.8083</td><td>0.0951</td><td><strong>0.4702</strong></td><td>0.0529</td><td>0.9406</td></tr>
+    <tr><td>RF (untuned)</td><td>Test</td><td>Base + clusters</td><td>0.2288</td><td>0.8046</td><td>0.1321</td><td>0.4209</td><td>0.0783</td><td>0.9392</td></tr>
+    <tr><td>RF (tuned)</td><td>Train</td><td>Base</td><td>0.9995</td><td>0.9999</td><td>0.9081</td><td>0.8316</td><td>1.0000</td><td>0.9795</td></tr>
+    <tr><td>RF (tuned)</td><td>Test</td><td>Base</td><td><strong>0.2339</strong></td><td><strong>0.8091</strong></td><td><strong>0.3061</strong></td><td>0.2529</td><td>0.3876</td><td>0.8963</td></tr>
+    <tr><td>RF (tuned)</td><td>Test</td><td>Base + clusters</td><td>0.2241</td><td>0.8049</td><td>0.3029</td><td>0.2401</td><td>0.4103</td><td>0.8885</td></tr>
+    <tr><td>Prevalence baseline</td><td>Test</td><td>&mdash;</td><td>0.0590</td><td>0.5000</td><td>0.0000</td><td>0.0000</td><td>0.0000</td><td>0.9410</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Class weighting changes the operating point, not the ranking.</strong> The unconstrained
+classifier is pathologically conservative under 5.9% prevalence: it achieves the highest precision
+in the study (0.470) but flags only <strong>5.3%</strong> of the positives, giving an almost useless
+F1 of 0.095. Adding <code>class_weight&nbsp;=&nbsp;"balanced"</code> raises recall to 38.8% and F1
+to 0.306&mdash;a <strong>3.2&times; F1 improvement</strong>&mdash;while PR-AUC and ROC-AUC barely
+move (0.2287&nbsp;&rarr;&nbsp;0.2339 and 0.8083&nbsp;&rarr;&nbsp;0.8091). The underlying ranking
+ability is unchanged; what changed is where the 0.5 decision threshold falls relative to the score
+distribution. This is a useful cautionary result: threshold-dependent metrics (F1, precision,
+recall, accuracy) can shift by 3&times; with no real gain in model quality, so they should never be
+reported alone for imbalanced problems.
+</p>
+
+<figure class="figure">
+  <img src="../../assets/img/rf_pr_curve.png" alt="Precision-recall curve for the tuned Random Forest" />
+  <figcaption>
+    <strong>Figure 11.</strong> Precision&ndash;recall curve for the tuned Random Forest classifier
+    on the temporal test split (PR-AUC&nbsp;=&nbsp;0.2339, about 3.96&times; the 0.059 prevalence
+    baseline).
+  </figcaption>
+</figure>
+
+<figure class="figure">
+  <img src="../../assets/img/rf_roc_curve.png" alt="ROC curve for the tuned Random Forest" />
+  <figcaption>
+    <strong>Figure 12.</strong> ROC curve for the tuned Random Forest classifier
+    (ROC-AUC&nbsp;=&nbsp;0.8091), the strongest discrimination achieved in the study.
+  </figcaption>
+</figure>
+
+
+<!-- ---------------- 4.5 head-to-head ---------------- -->
+<h3>4.5 Model comparison: tradeoffs, strengths, and limitations</h3>
+
+<p>
+All four models below were trained on the identical 244-feature matrix and the identical temporal
+split, so the differences are attributable to model class alone. Best test values per column are in
+bold.
+</p>
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Test-split metric</th>
+      <th>Ridge</th>
+      <th>Logistic Regression</th>
+      <th>RF (untuned)</th>
+      <th>RF (tuned)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>R<sup>2</sup> (log)</td><td>0.141</td><td>&mdash;</td><td><strong>0.1444</strong></td><td>0.1433</td></tr>
+    <tr><td>RMSE (log)</td><td>1.111</td><td>&mdash;</td><td><strong>1.1082</strong></td><td>1.1089</td></tr>
+    <tr><td>Spearman \(\rho\)</td><td>0.395</td><td>&mdash;</td><td>0.4578</td><td><strong>0.4605</strong></td></tr>
+    <tr><td>Precision@10%</td><td>0.200</td><td>&mdash;</td><td>0.2363</td><td><strong>0.2469</strong></td></tr>
+    <tr><td>Recall@10%</td><td>0.339</td><td>&mdash;</td><td>0.4003</td><td><strong>0.4183</strong></td></tr>
+    <tr><td>NDCG@10%</td><td>0.633</td><td>&mdash;</td><td>0.6664</td><td><strong>0.6732</strong></td></tr>
+    <tr><td>Lift@10%</td><td>3.39&times;</td><td>&mdash;</td><td>4.00&times;</td><td><strong>4.18&times;</strong></td></tr>
+    <tr><td>PR-AUC</td><td>&mdash;</td><td>0.180</td><td>0.2287</td><td><strong>0.2339</strong></td></tr>
+    <tr><td>ROC-AUC</td><td>&mdash;</td><td>0.773</td><td>0.8083</td><td><strong>0.8091</strong></td></tr>
+    <tr><td>F1</td><td>&mdash;</td><td>0.255</td><td>0.0951</td><td><strong>0.3061</strong></td></tr>
+    <tr><td>Recall (classification)</td><td>&mdash;</td><td><strong>0.522</strong></td><td>0.0529</td><td>0.3876</td></tr>
+    <tr><td>Train&ndash;test R<sup>2</sup> gap</td><td><strong>0.038</strong></td><td>&mdash;</td><td>0.700</td><td>0.356</td></tr>
+  </tbody>
+</table>
+
+<p>Reading the comparison model by model:</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Strengths</th><th>Limitations</th><th>Best used for</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>K-Means</strong><br />(unsupervised)</td>
+      <td>Recovers arXiv categories with no labels; produces interpretable archetypes whose
+          top-decile rates differ 4&times;; cheap to fit; needs no citation data at all.</td>
+      <td>Descriptive, not predictive; silhouette on text alone gives no clear \(k\), so the choice
+          is a judgement call; assumes isotropic Euclidean clusters, which is only approximately
+          true even after L2-normalized LSA.</td>
+      <td>Explaining <em>why</em> impact varies; stratifying error analysis.</td>
+    </tr>
+    <tr>
+      <td><strong>Ridge</strong><br />(linear regression)</td>
+      <td>Smallest generalization gap of any model (0.038); seconds to train; coefficients directly
+          readable; a genuinely competitive \(R^2\).</td>
+      <td>Weakest ranker (\(\rho=0.395\), 3.39&times; lift); compresses all predictions toward the
+          mean, so the high-impact tail is systematically under-predicted; cannot express
+          interactions.</td>
+      <td>A capacity floor and a fast, transparent reference point.</td>
+    </tr>
+    <tr>
+      <td><strong>Logistic Regression</strong><br />(linear classification)</td>
+      <td>Highest classification recall (0.522) at the default threshold; calibrated probabilities;
+          transparent.</td>
+      <td>Lowest PR-AUC (0.180) and ROC-AUC (0.773) of the supervised models; low precision (0.169)
+          means most flagged papers are false positives.</td>
+      <td>A high-recall first-pass screen where false positives are cheap.</td>
+    </tr>
+    <tr>
+      <td><strong>Random Forest</strong><br />(nonlinear, tuned)</td>
+      <td>Best ranker and best classifier on every threshold-free metric: \(\rho=0.4605\),
+          4.18&times; lift, PR-AUC 0.2339, ROC-AUC 0.8091; captures interactions automatically;
+          supplies permutation importances.</td>
+      <td>By far the most expensive to train and tune; still overfits (0.356 gap) even after
+          regularization; no better than Ridge on \(R^2\)/RMSE; threshold-dependent metrics are
+          highly sensitive to class weighting.</td>
+      <td>Producing the shortlist &mdash; the actual deployment task.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+<strong>The three conclusions that survive this comparison.</strong>
+(i) <em>Nonlinearity buys ranking, not accuracy.</em> Random Forest improves Spearman by 16.6% and
+lift by 23% over Ridge while leaving \(R^2\) statistically indistinguishable&mdash;the models
+disagree about paper <em>order</em>, not about the overall difficulty of the target.
+(ii) <em>Roughly \(R^2\approx0.14\) is a ceiling for this feature set,</em> reached independently by
+a linear model, an unconstrained forest, and a regularized forest. Since regularization moved
+training \(R^2\) from 0.844 to 0.500 without moving test \(R^2\), the remaining error is not
+variance. It is irreducible noise plus temporal distribution shift, matching the theoretical
+expectation that long-term impact is partly stochastic [2] and the empirical finding that
+publication-time text explains only a minority of citation variance [8].
+(iii) <em>Every model beats its baseline by a wide margin.</em> A 4.18&times; lift and a 0.809
+ROC-AUC are practically useful even with a low \(R^2\), which is why we report ranking metrics
+alongside regression metrics rather than in place of them.
+</p>
+
+
+<!-- ---------------- 4.6 ablation ---------------- -->
+<h3>4.6 Does unsupervised structure help the supervised models?</h3>
+
+<p>
+Section&nbsp;4.1 showed that the \(k=8\) archetypes differ 4&times; in top-decile rate, so cluster
+membership plainly correlates with impact. We tested whether handing that structure to the
+supervised models as explicit features (16 extra columns: 8 one-hot indicators plus 8 centroid
+distances, 244&nbsp;&rarr;&nbsp;260 features) improves prediction.
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Model</th><th>Metric</th><th>Base (244 feat.)</th><th>Base + clusters (260 feat.)</th><th>&Delta;</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Ridge</td><td>RMSE</td><td>1.1107</td><td>1.1107</td><td>0.0000</td></tr>
+    <tr><td>Ridge</td><td>Spearman \(\rho\)</td><td>0.3951</td><td>0.3951</td><td>0.0000</td></tr>
+    <tr><td>Ridge</td><td>Precision@10%</td><td>0.2003</td><td>0.2007</td><td>+0.0004</td></tr>
+    <tr><td>Logistic Regression</td><td>PR-AUC</td><td>0.1798</td><td>0.1794</td><td>&minus;0.0004</td></tr>
+    <tr><td>RF (tuned)</td><td>R<sup>2</sup></td><td>0.1433</td><td>0.1462</td><td>+0.0029</td></tr>
+    <tr><td>RF (tuned)</td><td>Spearman \(\rho\)</td><td>0.4605</td><td>0.4558</td><td>&minus;0.0047</td></tr>
+    <tr><td>RF (tuned)</td><td>Precision@10%</td><td>0.2469</td><td>0.2402</td><td>&minus;0.0067</td></tr>
+    <tr><td>RF (tuned)</td><td>PR-AUC</td><td>0.2339</td><td>0.2241</td><td>&minus;0.0098</td></tr>
+    <tr><td>RF (tuned)</td><td>Recall (classification)</td><td>0.3876</td><td>0.4103</td><td>+0.0227</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>The answer is no, and the reason is informative.</strong> For the linear baselines the effect
+is exactly zero to four decimal places. For the Random Forest the changes are small and
+inconsistent in sign&mdash;\(R^2\) improves by 0.003 while PR-AUC drops by 0.010. The clusters were
+derived from the same 100-d LSA block that is <em>already</em> in the feature matrix, so K-Means adds
+no new information; it only supplies a coarser, quantized view of a representation the models can
+already read continuously. Discretizing a continuous signal cannot add information, and for the
+forest it slightly hurts by spending splits on redundant columns.
+</p>
+
+<p>
+This does not make the unsupervised stage worthless&mdash;it is what told us that impact varies
+4&times; across topics, and it is the basis for per-archetype error analysis. But as a feature
+engineering step it is a null result, and we report it as such rather than selecting the one metric
+that happened to improve.
+</p>
+
+
+<!-- ---------------- 4.7 feature importance ---------------- -->
+<h3>4.7 What actually drives predicted impact?</h3>
+
+<p>
+Permutation importance was computed on the test split (10 repeats) for the tuned Random Forest,
+scored on negative RMSE for regression and ROC-AUC for classification. Column indices map to the
+documented feature order: columns 0&ndash;99 are LSA text dimensions, 100&ndash;108 are the nine
+numeric metadata fields, and 109+ are primary-category indicators.
+</p>
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Rank</th><th>Feature</th><th>Block</th>
+      <th>Permutation importance (regression)</th>
+      <th>Permutation importance (classification)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td><code>venue_freq</code></td><td>Metadata</td><td>0.0484</td><td>0.0578</td></tr>
+    <tr><td>2</td><td><code>reference_count</code></td><td>Metadata</td><td>0.0146</td><td>0.0169</td></tr>
+    <tr><td>3</td><td><code>author_count</code></td><td>Metadata</td><td>0.0110</td><td>0.0118</td></tr>
+    <tr><td>4</td><td><code>LSA_1</code></td><td>Text</td><td>0.0095</td><td>0.0115</td></tr>
+    <tr><td>5</td><td><code>LSA_6</code></td><td>Text</td><td>0.0065</td><td>0.0080</td></tr>
+    <tr><td>6</td><td><code>n_countries</code></td><td>Metadata</td><td>0.0034</td><td>0.0014</td></tr>
+    <tr><td>7</td><td><code>LSA_11</code></td><td>Text</td><td>0.0033</td><td>0.0032</td></tr>
+    <tr><td>8</td><td>category indicator (col. 129)</td><td>Category</td><td>0.0028</td><td>0.0063</td></tr>
+    <tr><td>9</td><td><code>abstract_len_words</code></td><td>Metadata</td><td>0.0020</td><td>0.0019</td></tr>
+    <tr><td>10</td><td><code>LSA_18</code></td><td>Text</td><td>0.0019</td><td>0.0031</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Metadata dominates, and one feature dominates the metadata.</strong> Venue frequency alone
+carries roughly 3.3&times; the importance of the next feature and about 5&times; the strongest single
+text dimension. Reference count and author count follow. The ordering is stable across both tasks
+and both importance measures (impurity-based and permutation-based), and it reproduces the
+literature: metadata available at publication time contributes more predictive power than text
+[1], while text remains a real but secondary contributor [8].
+</p>
+
+<p>
+Two caveats. First, individual LSA dimensions understate the text block's contribution, because
+100 correlated dimensions each absorb a fraction of a shared signal&mdash;permuting one leaves the
+others intact. The correct comparison is block-wise, which we did not run. Second, and more
+importantly, <code>venue_freq</code> is a prestige proxy. Its dominance means the model is partly
+learning <em>where</em> work was published rather than <em>what</em> it contains, which is a
+finding about the citation system as much as about the papers, and it is central to the ethical
+reading in Section&nbsp;4.8.
+</p>
+
+
+<!-- ---------------- 4.8 ethics ---------------- -->
+<h3>4.8 Sustainability and ethical considerations</h3>
+
+<p>
+<strong>Citation counts are a biased target.</strong> They reflect venue prestige, field size,
+language, author seniority, and network effects, not merit alone. Our own feature-importance
+analysis makes this concrete rather than hypothetical: the strongest single predictor in the entire
+model is <code>venue_freq</code>. A system built on these predictions would therefore tend to
+reproduce and amplify existing prestige hierarchies&mdash;well-placed papers get surfaced, get read,
+and get cited, which is precisely the feedback loop that produced the Gini&nbsp;=&nbsp;0.73
+concentration in Figure&nbsp;1.
+</p>
+
+<p>
+<strong>Intended and unintended use.</strong> These models are a descriptive tool for studying
+citation dynamics and, at most, a discovery aid for surfacing candidate reading. They are
+explicitly <em>not</em> suitable for evaluating researchers, ranking job or grant applicants, or
+allocating resources. The \(R^2\approx0.14\) ceiling is itself an argument against such use: at the
+level of an individual paper, the model is far too uncertain to justify a consequential decision
+about a person.
+</p>
+
+<p>
+<strong>Correlational, not causal.</strong> The analysis is observational. Feature importances
+describe associations under a specific model, split, and corpus; they do not license claims that
+adding authors or targeting a frequent venue <em>causes</em> citations.
+</p>
+
+<p>
+<strong>Coverage and label quality.</strong> Citation labels come from OpenAlex, whose coverage is
+good but incomplete, and the corpus is restricted to arXiv AI/ML preprints in three categories.
+Conclusions may not transfer to fields with different posting and citation norms. We flagged one
+concrete data-quality issue during the project: the C2 and C3 cohort archives on the team drive
+were truncated uploads and failed integrity checks, which is one reason those cohorts remain
+unevaluated (Section&nbsp;5).
+</p>
+
+<p>
+<strong>Sustainability.</strong> The pipeline was designed to be cheap and reproducible on
+commodity hardware. Compressing TF-IDF to 100 LSA dimensions before modelling is the main lever:
+it reduces the feature space by two orders of magnitude relative to the raw 13,775-term vocabulary
+and makes every downstream fit tractable on a laptop CPU. Every stage is seeded
+(<code>random_state = 42</code>), all data sources are key-free and open, and intermediate
+artifacts are cached so downstream stages need not refit upstream transformers. The most
+expensive single operation in the project was the Random Forest randomized search; we ran it once
+and reused the selected parameters for the cluster-augmented variant rather than repeating the
+search, which is also why we scoped gradient boosting out rather than launching a second large
+sweep.
+</p>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- 5. CONCLUSION & NEXT STEPS                                     -->
+<!-- ============================================================= -->
+<section id="conclusion">
+
+<h2 class="section-title">
+  <span class="section-num">5.</span> Conclusions &amp; Next Steps
+</h2>
+
+<p>
+We built a leakage-free pipeline that predicts the citation impact of AI/ML papers from
+publication-time information only, and evaluated four models&mdash;K-Means, Ridge, Logistic
+Regression, and Random Forest&mdash;on identical temporal splits across regression, ranking, and
+classification.
+</p>
+
+<p><strong>What we found:</strong></p>
+<ul>
+  <li>
+    Publication-time features carry real signal. The best model surfaces a top-10% shortlist that is
+    <strong>4.18&times;</strong> enriched in highly cited papers and recovers <strong>41.8%</strong>
+    of them, at <strong>ROC-AUC 0.809</strong>.
+  </li>
+  <li>
+    Point prediction is capped near <strong>\(R^2\approx0.14\)</strong>. Three different models
+    converge on this value, and halving the forest's training fit through regularization did not
+    move it, so the residual is noise and temporal shift rather than removable variance.
+  </li>
+  <li>
+    Nonlinearity improves <em>ordering</em>, not accuracy: Spearman \(\rho\) rises 16.6% over the
+    linear baseline while \(R^2\) is unchanged.
+  </li>
+  <li>
+    Unsupervised structure is <strong>explanatory but not additive</strong>. Topic archetypes differ
+    4&times; in top-decile rate, yet adding cluster features to the supervised models changes nothing
+    measurable, because the clusters are derived from a representation the models already see.
+  </li>
+  <li>
+    <code>venue_freq</code> is the dominant predictor, ahead of reference count, author count, and
+    every individual text dimension &mdash; a result with direct ethical implications.
+  </li>
+</ul>
+
+<p><strong>Next steps.</strong> Four directions follow from the limitations above, in priority order:</p>
+
+<ol>
+  <li>
+    <strong>Gradient boosting (XGBoost / LightGBM).</strong> The natural next model. Boosting [9]
+    corrects errors sequentially and offers finer regularization (learning rate, subsampling, L1/L2
+    penalties, depth limits) than bagging, so it is the best candidate for a better
+    bias&ndash;variance tradeoff. We scoped this out of the current report rather than report a
+    hastily tuned model; the RF randomized search consumed the compute budget we had allocated for
+    ensemble tuning.
+  </li>
+  <li>
+    <strong>Cross-cohort generalization on C2 and C3.</strong> Since our evidence points at
+    distribution shift as the binding constraint, testing a C1-trained model on 2023&ndash;2024 and
+    2025&ndash;2026 papers is the direct way to quantify it. This requires re-uploading the C2/C3
+    archives, which failed integrity checks during this project.
+  </li>
+  <li>
+    <strong>Per-archetype error analysis.</strong> We have the \(k=8\) cluster assignments and the
+    per-paper predictions but report only global metrics. Breaking error down by archetype would
+    show whether the model is uniformly mediocre or accurate on vision topics and blind on
+    optimization/theory (the 4.0% top-decile, 16.2%-uncited regime), which changes how a shortlist
+    should be presented.
+  </li>
+  <li>
+    <strong>Debiasing and richer representations.</strong> Given the dominance of
+    <code>venue_freq</code>, an ablation that removes prestige proxies entirely would show how much
+    predictive power survives without them&mdash;a more defensible model even at lower accuracy.
+    Beyond that, transformer text encoders (e.g. SciBERT-style embeddings, cf. [8]) and graph
+    features from citation and collaboration networks are the obvious ways to strengthen the
+    representation itself.
+  </li>
+</ol>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- REFERENCES                                                     -->
+<!-- ============================================================= -->
+<section id="references">
+
+<h2 class="section-title">References</h2>
+
+<ol class="refs">
+  <li>
+    R. Yan, J. Tang, X. Liu, D. Shan, and X. Li, "Citation count prediction: Learning to estimate
+    future citations for literature," in <em>Proc. 20th ACM Int. Conf. Information and Knowledge
+    Management (CIKM)</em>, Glasgow, U.K., 2011, pp. 1247&ndash;1252.
+  </li>
+  <li>
+    D. Wang, C. Song, and A.-L. Barab&aacute;si, "Quantifying long-term scientific impact,"
+    <em>Science</em>, vol. 342, no. 6154, pp. 127&ndash;132, Oct. 2013.
+  </li>
+  <li>
+    J. Priem, H. Piwowar, and R. Orr, "OpenAlex: A fully-open index of scholarly works, authors,
+    venues, institutions, and concepts," 2022, <em>arXiv:2205.01833</em>.
+  </li>
+  <li>
+    L. Breiman, "Random forests," <em>Machine Learning</em>, vol. 45, no. 1, pp. 5&ndash;32, Oct. 2001.
+  </li>
+  <li>
+    F. Pedregosa <em>et al.</em>, "Scikit-learn: Machine learning in Python," <em>Journal of Machine
+    Learning Research</em>, vol. 12, pp. 2825&ndash;2830, 2011.
+  </li>
+  <li>
+    S. Fortunato <em>et al.</em>, "Science of science," <em>Science</em>, vol. 359, no. 6379,
+    eaao0185, Mar. 2018.
+  </li>
+  <li>
+    M. Franceschet, "The skewness of computer science," <em>Information Processing &amp;
+    Management</em>, vol. 47, no. 1, pp. 117&ndash;124, Jan. 2011.
+  </li>
+  <li>
+    M. M. van Dongen, G. Maillette de Buy Wenniger, and L. Schomaker, "SChuBERT: Scholarly document
+    chunks with BERT-encoding boost citation count prediction," in <em>Proc. First Workshop on
+    Scholarly Document Processing</em>, 2020, pp. 148&ndash;157.
+  </li>
+  <li>
+    T. Chen and C. Guestrin, "XGBoost: A scalable tree boosting system," in <em>Proc. 22nd ACM
+    SIGKDD Int. Conf. Knowledge Discovery and Data Mining</em>, San Francisco, CA, USA, 2016,
+    pp. 785&ndash;794.
+  </li>
+</ol>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- GANTT                                                          -->
+<!-- ============================================================= -->
+<section id="gantt">
+
+<h2 class="section-title">Gantt Chart</h2>
+
+<p class="wordnote">
+Each member's responsibilities across the entirety of the project, from proposal through final
+submission.
+</p>
+
+<div class="gantt">
+<table class="gantt-table">
+  <thead>
+    <tr>
+      <th class="task-col">Task</th>
+      <th>W4</th><th>W5</th><th>W6</th><th>W7</th><th>W8</th><th>W9</th><th>W10</th><th>W11</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr>
+      <td class="task-name">Project scoping &amp; proposal</td>
+      <td><span class="gbar"><span class="seg p-all">ALL</span></span></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">&#9670; Proposal submission</td>
+      <td><span class="gmile"></span></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Data collection and cleaning</td>
+      <td></td>
+      <td><span class="gbar"><span class="seg p-cs">CS</span></span></td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Feature engineering and EDA</td>
+      <td></td><td></td>
+      <td><span class="gbar"><span class="seg p-cs">CS</span></span></td>
+      <td></td><td></td><td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Unsupervised learning: impact archetype clustering</td>
+      <td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+      <td><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+      <td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Supervised baselines: Ridge / Logistic</td>
+      <td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+      <td><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+      <td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Midterm report</td>
+      <td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-jp">JP</span><span class="seg p-cp">CP</span></span></td>
+      <td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">&#9670; Midterm submission</td>
+      <td></td><td></td><td></td><td></td>
+      <td><span class="gmile"></span></td>
+      <td></td><td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Supervised nonlinear model: Random Forest</td>
+      <td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-jp">JP</span></span></td>
+      <td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Hyperparameter tuning &amp; cluster-augmented ablation</td>
+      <td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-jp">JP</span></span></td>
+      <td><span class="gbar"><span class="seg p-jp">JP</span></span></td>
+      <td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Feature importance &amp; model comparison</td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-jp">JP</span><span class="seg p-hz">HZ</span></span></td>
+      <td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Website build &amp; report integration</td>
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+      <td><span class="gbar"><span class="seg p-jk">JK</span></span></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Final report writeup &amp; review</td>
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-cp">CP</span><span class="seg p-jp">JP</span></span></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Final presentation &amp; video</td>
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-all">ALL</span></span></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">&#9670; Final submission</td>
+      <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gmile"></span></td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<div class="gantt-people">
+  <span class="who"><span class="owner p-jp">JP</span> Pyo, Jaechan</span>
+  <span class="who"><span class="owner p-cs">CS</span> Shih, Cheng-Jhih</span>
+  <span class="who"><span class="owner p-jk">JK</span> Kim, Jeonghwan</span>
+  <span class="who"><span class="owner p-hz">HZ</span> Zhang, Haoming</span>
+  <span class="who"><span class="owner p-cp">CP</span> Park, Christopher Y.</span>
+  <span class="who"><span class="owner p-all">ALL</span> Whole team</span>
+</div>
+
+</section>
+
+
+<!-- ============================================================= -->
+<!-- CONTRIBUTION TABLE                                             -->
+<!-- ============================================================= -->
+<section id="contribution">
+
+<h2 class="section-title">Contribution Table</h2>
+
+<table class="data">
+  <thead>
+    <tr><th>Name</th><th>Final Report Contribution</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Shih, Cheng-Jhih</td>
+      <td>
+        Data pipeline maintenance: arXiv/OpenAlex collection and merging, temporal cohort
+        construction (C1/C2/C3), leakage-free preprocessing of text and metadata features, and
+        data-integrity checks on the cohort archives reported in Section&nbsp;4.8.
+      </td>
+    </tr>
+    <tr>
+      <td>Kim, Jeonghwan</td>
+      <td>
+        Unsupervised learning results carried into the final (K-Means model selection, archetype
+        profiling, PCA/UMAP/t-SNE figures, \(k\)-explorer); website build and integration of all
+        sections into the hosted final report page.
+      </td>
+    </tr>
+    <tr>
+      <td>Park, Christopher Y.</td>
+      <td>
+        Final report writeup and editorial review; consistency check of figures, tables, numbers,
+        and IEEE references across sections.
+      </td>
+    </tr>
+    <tr>
+      <td>Pyo, Jaechan</td>
+      <td>
+        Random Forest regression and classification (Section&nbsp;4.4): baseline and tuned models,
+        <code>RandomizedSearchCV</code> hyperparameter search, cluster-augmented Random Forest
+        ablation, permutation feature importance, and all RF figures and metric tables. Drafted the
+        Random Forest results section.
+      </td>
+    </tr>
+    <tr>
+      <td>Zhang, Haoming</td>
+      <td>
+        Supervised baselines carried into the final (Ridge and Logistic Regression), the shared
+        evaluation harness for regression/ranking/classification metrics used by every model, and
+        the linear-model half of the cluster-feature ablation and head-to-head comparison.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+</section>
+
+</main>
+
+
+<footer>
+  CS 7641 Machine Learning &middot; Summer 2026 &middot; Final Report
+</footer>
 
 </body>
 </html>
