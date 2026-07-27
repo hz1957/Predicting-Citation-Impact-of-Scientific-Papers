@@ -1,41 +1,262 @@
-# Predicting Citation Impact of Scientific Papers - Dataset (CS 7641, Team 7)
+# Predicting Citation Impact of Scientific Papers (CS 7641, Team 7)
 
-A curated dataset of ~150,000 AI/ML arXiv papers (categories `cs.LG`, `cs.CL`,
-`cs.CV`) labeled with citation impact and enriched with metadata, affiliations,
-venues, citation time series, and **full paper text**. Built for the project
-"Predicting Citation Impact of Scientific Papers".
+Code and data for the CS 7641 Summer 2026 group project *Predicting Citation
+Impact of Scientific Papers*.
 
-Each paper is one self-contained JSON record. Everything you need to train and
-evaluate a model is in the files under `data/`.
+The repository holds two things:
+
+1. **The dataset** - ~150,000 AI/ML arXiv papers (categories `cs.LG`, `cs.CL`,
+   `cs.CV`) labeled with citation impact and enriched with metadata,
+   affiliations, venues, citation time series, and **full paper text**. Each
+   paper is one self-contained JSON record under `data/`.
+2. **The modeling pipelines** - unsupervised (K-Means impact archetypes),
+   supervised linear baselines (Ridge, Logistic Regression), and the final
+   nonlinear stage (Random Forest, tuned, with a cluster-augmented ablation).
+
+The rendered project website lives in
+[jkim3662/CS7641-Web](https://github.gatech.edu/jkim3662/CS7641-Web) and is
+published on GT GitHub Pages; the proposal, midterm, and final reports are all
+hosted there.
 
 ---
 
-## 1. Files
-
-- Download data from [here](https://drive.google.com/drive/folders/1q59-Eyv4w28oXuL33fPhEyQCEsNTKBdR?usp=sharing) to `ML-Project-Team-7/data`
+## 1. Repository structure
 
 ```
 ML-Project-Team-7/
-├── README.md              # this file
-├── DATA_DICTIONARY.md     # every field: type, meaning, coverage, source, leakage flag
-├── data/
-│   ├── c1.jsonl.gz        # 49,999 papers, 2018-2022 (mature)        ~0.9 GB
-│   ├── c2.jsonl.gz        # 50,000 papers, 2023-2024 (semi-mature)   ~1.0 GB
-│   └── c3.jsonl.gz        # 49,974 papers, 2025-2026 (fresh)         ~1.1 GB
-└── samples/
-    ├── c1_sample.json     # 50 records, pretty-printed, full_text truncated
-    ├── c2_sample.json
-    └── c3_sample.json
+├── README.md                  # this file
+├── DATA_DICTIONARY.md         # every field: type, meaning, coverage, source, leakage flag
+├── data/                      # the three cohort archives (download separately)
+├── samples/                   # small human-readable extracts of each cohort
+├── unsupervised/              # K-Means impact archetypes + PCA/UMAP/t-SNE
+├── supervised/                # Ridge + Logistic Regression baselines
+└── random_forest_up/          # Random Forest, tuning, cluster-augmented ablation
 ```
 
-- Format is **JSONL** (one JSON object per line), **gzip**-compressed. Read it
-  directly - no need to unzip first (see Section 4). Open a `samples/*.json`
-  file in any editor to see the exact structure.
-- Total: **149,973 papers**, ~3.1 GB compressed (~13 GB uncompressed).
+- `/data/`: The three cohort archives in gzipped JSONL format, one JSON object
+  per line. **Not committed** - download from the
+  [team Google Drive](https://drive.google.com/drive/folders/1q59-Eyv4w28oXuL33fPhEyQCEsNTKBdR?usp=sharing)
+  into this directory. Contains `c1.jsonl.gz` (49,999 papers, 2018-2022,
+  ~0.9 GB), `c2.jsonl.gz` (50,000 papers, 2023-2024, ~1.0 GB), and
+  `c3.jsonl.gz` (49,974 papers, 2025-2026, ~1.1 GB). See Section 3.
+- `/samples/`: 50 pretty-printed records per cohort (`c1_sample.json`,
+  `c2_sample.json`, `c3_sample.json`) with `full_text` truncated. Open one in
+  any editor to see the exact record structure without downloading 3 GB.
+- `/unsupervised/`: The unsupervised learning stage. K-Means clustering on the
+  c1 train split in two feature spaces (text-only LSA, and LSA + metadata),
+  silhouette-based model selection, cluster profiling, and PCA / UMAP / t-SNE
+  visualizations. Produces the *k* = 3 category split and the *k* = 8 impact
+  archetypes reported in the midterm and final.
+- `/supervised/`: The supervised stage, in two phases. **Phase 1** is the midterm
+  baseline: leakage-safe train/test feature construction plus Ridge regression
+  (citation counts) and Logistic Regression (top-decile classification), with the
+  first cluster-feature ablation. **Phase 2** is the final XGBoost feature-stack
+  study: OpenAlex author/reference enrichment, four new feature blocks, and a
+  nine-way block-level ablation. Produces the strongest results in the project.
+- `/random_forest_up/`: The Random Forest stage. Random Forest regression and
+  classification, `RandomizedSearchCV` hyperparameter tuning, permutation
+  feature importance, and a second cluster-augmented ablation run under a
+  nonlinear model. The best-performing model on the original 244-feature matrix.
+
+Each modeling directory carries its own `README.md` with environment setup and
+run instructions. All three follow the same layout convention:
+
+- `/<stage>/run_*.py`: pipeline scripts, run in the order given in that
+  directory's README.
+- `/<stage>/artifacts/`: cached intermediate matrices, fitted transformers, and
+  trained models. **Gitignored** - regenerated by re-running the scripts.
+- `/<stage>/outputs/tables/`: metric CSVs (the numbers quoted in the reports).
+- `/<stage>/outputs/figures/`: publication-ready PNG figures.
+- `/<stage>/report/`: drop-in HTML/LaTeX report sections for that stage.
 
 ---
 
-## 2. Cohorts
+## 2. Code modules
+
+All three stages use the **c1 cohort temporal split**: train = papers published
+2018-2020 (24,691 papers), test = papers published 2021-2022 (25,308 papers).
+Every learned transformer is fit on train only and applied unchanged to test, so
+no information from future papers leaks backwards. Everything is seeded with
+`random_state = 42`.
+
+Shared environment:
+
+```bash
+conda create -n cs7641-team7 python=3.12 -y
+conda activate cs7641-team7
+pip install scikit-learn pandas numpy scipy matplotlib joblib umap-learn
+```
+
+### 2.1 `/unsupervised/` - K-Means impact archetypes
+
+```bash
+python run_features.py       # TF-IDF -> TruncatedSVD (LSA) + scaled metadata
+python run_clustering.py     # K-Means sweeps, cluster profiles, top terms
+python run_visualize.py      # PCA / UMAP / t-SNE figures
+python run_k_explorer.py     # optional: per-k images for the interactive slider
+```
+
+- `/unsupervised/run_features.py`: Builds the 100-d LSA text block (TF-IDF over
+  title + abstract, 13,775 terms, L2-normalized) and the standardized metadata
+  block.
+- `/unsupervised/run_clustering.py`: K-Means sweeps over *k* with silhouette and
+  Davies-Bouldin scoring, in both feature spaces; writes cluster profiles,
+  per-cluster citation outcomes, and top TF-IDF terms.
+- `/unsupervised/run_visualize.py`: PCA, UMAP, and t-SNE projections colored by
+  cluster and by log citations.
+- `/unsupervised/run_k_explorer.py`: Renders one image per *k* for the
+  interactive k-slider embedded in the website.
+- `/unsupervised/plot_style.py`: Shared matplotlib styling so every figure
+  matches the website palette.
+- `/unsupervised/report/FINDINGS.md`: Written findings, the per-archetype
+  outcome table, and figure recommendations for the report.
+- `/unsupervised/report/preview.html`: Local preview of the report section
+  (`bash report/make_preview.sh`, then open in a browser - no server needed).
+- `/unsupervised/outputs/web/` and `/unsupervised/outputs/paper/`: The same
+  figures as 200 dpi PNG (website) and vector PDF (Overleaf).
+
+Key result: *k* = 3 on LSA + metadata recovers the arXiv category split without
+labels; *k* = 8 on text alone yields eight topical archetypes whose top-decile
+citation rates differ by 4x (16.0% for 3D & object detection vs 4.0% for
+optimization & theory).
+
+### 2.2 `/supervised/` - linear baselines and the XGBoost feature stack
+
+#### Phase 1 - Ridge and Logistic Regression baselines
+
+```bash
+python run_features.py                    # leakage-safe train/test matrices
+python run_baselines.py                   # Ridge + Logistic Regression
+python run_cluster_augmented_baselines.py # + k=8 cluster features (ablation)
+```
+
+- `/supervised/run_features.py`: Fits TF-IDF, TruncatedSVD, `StandardScaler`,
+  and `OneHotEncoder` **on the train split only**, then transforms test.
+  Writes `X_train.npz` / `X_test.npz` (244 features: 100 LSA + 9 numeric
+  metadata + 135 category indicators), targets, and `transformers.joblib`.
+- `/supervised/run_baselines.py`: Ridge (`alpha = 1.0`) on
+  `log1p(target_citations)` and Logistic Regression (`C = 1.0`,
+  `class_weight = "balanced"`, `max_iter = 2000`) on the top-decile label
+  (>= 41 citations). Also defines the shared metric helpers
+  (`regression_row`, `ranking_row`, `classification_row`) reused downstream.
+- `/supervised/run_cluster_augmented_baselines.py`: Appends the unsupervised
+  *k* = 8 cluster one-hots and centroid distances (244 -> 260 features) and
+  re-runs both baselines to measure the effect.
+
+Key result: Ridge reaches test R2 = 0.141 and Spearman 0.395 with a 3.39x
+lift@10%; Logistic Regression reaches ROC-AUC 0.773 and PR-AUC 0.180. The
+cluster features change the linear results by ~0.000.
+
+#### Phase 2 - XGBoost feature-stack study
+
+```bash
+python run_openalex_enrichment.py    # author/reference IDs and edges from OpenAlex
+python run_final_feature_stack.py    # the nine-stack ablation (final numbers)
+```
+
+- `/supervised/run_openalex_enrichment.py`: Resolves OpenAlex author and
+  referenced-work identifiers for the c1 cohort (49,305 papers; 98.3% train and
+  99.1% test coverage) and caches the edges used to build history features. Uses
+  OpenAlex only for identifiers and edges - never for current citation counts,
+  h-index, or other future-aware author metrics.
+- `/supervised/run_final_feature_stack.py`: The unified final experiment. Builds
+  the four candidate feature blocks once, then trains and evaluates every stack
+  with the same XGBoost regressor and classifier, the same train/test split, the
+  same 2020 temporal validation fold for early stopping, and the same ranking
+  protocol. This is block-level ablation, not greedy forward selection. Writes
+  `final_feature_stack_{regression,ranking,classification,dimensions,importance,group_importance}.csv`
+  and `final_feature_stack_summary.png`.
+- `/supervised/run_phase2_tree_models.py`: The XGBoost regressor and classifier
+  themselves, with temporal-validation early stopping, F1-tuned decision
+  thresholds, feature-importance aggregation, and the PR / ROC / predicted-vs-true
+  / residual figures.
+- `/supervised/run_feature_ablations.py`,
+  `/supervised/run_train_history_ablation.py`: The earlier separated ablations of
+  content/identity features and author/reference history. Superseded by
+  `run_final_feature_stack.py`, which reran them in one coherent pipeline; kept
+  for provenance.
+- `/supervised/report/final_supervised_section.html`, `.tex`: Drop-in final
+  report sections (web and Overleaf) for the XGBoost results.
+
+The four feature blocks stack onto the 244-feature base matrix: full-text LSA
+(+53), affiliation/country (+518), venue identity (+486), and leakage-safe
+author/reference history (+26), reaching 1,327 features for the full stack. All
+history aggregates are computed from *earlier* c1 train labels only.
+
+Key result: XGBoost on the same 244-feature base matrix already reaches test
+R2 = 0.202 (vs 0.141 for Ridge, 0.143 for the tuned Random Forest). The full
+stack reaches R2 = 0.246, ROC-AUC 0.832, and PR-AUC 0.261; the smaller
+full-text + history stack (323 features) is the best ranker at precision@10%
+0.285 and 4.83x lift. Author/reference history is the largest single new source
+of signal, and adding features is not monotonically helpful.
+
+### 2.3 `/random_forest_up/` - Random Forest, tuning, and final ablation
+
+```bash
+python run_features.py                       # same feature build as /supervised/
+python run_random_forest_basecheck.py        # untuned RF regressor + classifier
+python run_random_forest_basecheck.py \
+    --n-estimators 300 --max-depth 20 \
+    --min-samples-leaf 10 --max-features sqrt # tuned configuration
+python run_cluster_augmented_random_forest.py --reuse-baseline-params
+```
+
+- `/random_forest_up/run_random_forest_basecheck.py`: Trains
+  `RandomForestRegressor` and `RandomForestClassifier` on the supervised feature
+  matrix, computes regression / ranking / classification metrics on identical
+  definitions to `/supervised/` so the models are directly comparable, generates
+  the PR, ROC, predicted-vs-true, and residual figures, and computes both
+  impurity and permutation feature importance. Pass `--tune` to run
+  `RandomizedSearchCV` (5-fold, scored on negative RMSE for regression and
+  ROC-AUC for classification) instead of using the CLI hyperparameters.
+- `/random_forest_up/run_cluster_augmented_random_forest.py`: Loads the TF-IDF
+  vectorizer, LSA transformer, and *k* = 8 K-Means model exported from the
+  unsupervised stage, projects train and test papers into the existing LSA
+  space, appends cluster one-hots and centroid distances, and trains the forest
+  on both feature sets to quantify the transfer.
+- `/random_forest_up/run_features.py`, `run_baselines.py`,
+  `run_cluster_augmented_baselines.py`: Copies of the `/supervised/` scripts, so
+  this directory can regenerate the shared feature matrices and the linear
+  comparison numbers standalone.
+- `/random_forest_up/outputs/`: Results for the **untuned** forest
+  (`max_depth = None`).
+- `/random_forest_up/output_finetune/`: Results for the **tuned** forest
+  (`max_depth = 20`, `min_samples_leaf = 10`, `n_estimators = 300`). These are
+  the numbers reported in the final report.
+- `/random_forest_up/Report/randomforestdraft.html`: Drop-in HTML report section
+  for the Random Forest results.
+
+Key result: the tuned forest is the best ranker and classifier in the project -
+Spearman 0.4605, precision@10% 0.2469 (**4.18x lift**), PR-AUC 0.2339, ROC-AUC
+0.8091. Test R2 (0.143) is statistically indistinguishable from Ridge's 0.141
+even though regularization cut *training* R2 from 0.844 to 0.500, which is the
+evidence that the remaining error is noise and temporal shift rather than
+removable variance.
+
+> **Known issue.** `run_cluster_augmented_random_forest.py` imports from a
+> module named `run_random_forest_baselines`, but the file in this directory is
+> named `run_random_forest_basecheck.py`. The script will raise
+> `ModuleNotFoundError` as committed; rename the file (or the import) before
+> re-running it. The committed results in `outputs/` and `output_finetune/` were
+> generated before the rename.
+
+### 2.4 Reuse between stages
+
+`/random_forest_up/` intentionally reuses artifacts from the earlier stages
+rather than refitting them:
+
+- From `/supervised/`: `X_train.npz`, `X_test.npz`, `y_train.npy`, `y_test.npy`,
+  `target_citations_train.npy`, `target_citations_test.npy`.
+- From `/unsupervised/`: `tfidf_vectorizer.joblib`,
+  `text_lsa_transformer.joblib`, `kmeans_text.joblib` (copied into
+  `random_forest_up/artifacts/`).
+
+Because all of these were fit on the train split only, reusing them keeps the
+pipeline leakage-free.
+
+---
+
+## 3. Cohorts
 
 Cohorts are mutually exclusive and split by publication year. They differ in how
 "mature" their citation counts are, which changes the prediction target.
@@ -48,12 +269,21 @@ Cohorts are mutually exclusive and split by publication year. They differ in how
 
 **C1 ships a temporal split** (field `split`): train = papers published <= 2020,
 test = 2021-2022. This mimics real forecasting (train on the past, predict the
-future) and is the recommended setup for your main experiments. C2/C3 have no
+future) and is the setup used by every stage in Section 2. C2/C3 have no
 predefined split (`split` is null); split them yourself if needed.
+
+Format is **JSONL** (one JSON object per line), **gzip**-compressed. Read it
+directly - no need to unzip first (see Section 5). Total: **149,973 papers**,
+~3.1 GB compressed (~13 GB uncompressed).
+
+> **Note.** The `c2.jsonl.gz` and `c3.jsonl.gz` uploads on the shared Drive have
+> failed `gzip -t` integrity checks (truncated uploads). `c1.jsonl.gz` is
+> intact and is all the reported experiments need, but c2/c3 must be re-uploaded
+> before any cross-cohort generalization work.
 
 ---
 
-## 3. The prediction target
+## 4. The prediction target
 
 - `target_citations` - the citation count to predict (per-cohort, see table above).
 - `y_log` - `log1p(target_citations)`. **Train on this** (citation counts are
@@ -88,7 +318,7 @@ Safe-to-use predictors: title, abstract, full_text, `author_count`,
 
 ---
 
-## 4. How to load
+## 5. How to load
 
 ```python
 import pandas as pd
@@ -123,17 +353,15 @@ Command-line peek:
 zcat data/c1.jsonl.gz | head -n 1 | python -m json.tool
 ```
 
-### Prebuilt feature matrices (optional)
-If you would rather skip feature engineering, the main repo also ships
-ready-to-model matrices (TF-IDF + SVD on text plus scaled/encoded metadata,
-321 features) as NumPy arrays in `../data/processed/features/`
-(`X_c1_train.npy`, `y_c1_train.npy`, `X_c1_test.npy`, `X_c2.npy`, `X_c3.npy`,
-`feature_names.json`, `transformers.joblib`). These are not part of this JSON
-package because `.npy` is not JSON-native.
+### Prebuilt feature matrices
+If you would rather skip feature engineering, run
+`python supervised/run_features.py` - it writes the 244-feature train/test
+matrices and the fitted transformers to `supervised/artifacts/` (gitignored).
+Every modeling stage in Section 2 consumes those files.
 
 ---
 
-## 5. Coverage
+## 6. Coverage
 
 Most fields are near-complete. The two lower-coverage fields (`countries`,
 `counts_by_year`) are at their natural limit: very recent papers simply have no
@@ -153,7 +381,7 @@ Citation counts and reference counts are ~100% across all cohorts.
 
 ---
 
-## 6. Sources & attribution
+## 7. Sources & attribution
 
 - **arXiv metadata** (titles, abstracts, authors, categories, DOIs): the
   `librarian-bots/arxiv-metadata-snapshot` dataset on Hugging Face.
@@ -169,5 +397,5 @@ Each enriched field carries a `*_source` column recording where its value came
 from. Please respect the terms of use of the underlying sources; this dataset is
 for the CS 7641 course project.
 
-The full reproducible pipeline (download -> sample -> enrich -> curate ->
+The full reproducible data pipeline (download -> sample -> enrich -> curate ->
 featurize -> full text) lives in the parent repository under `src/`.
