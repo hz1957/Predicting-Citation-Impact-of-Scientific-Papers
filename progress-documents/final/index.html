@@ -213,7 +213,7 @@ fixed-window citation count. We study three linked formulations:
 libraries, and reviewers prioritize a rapidly growing literature, and feature-importance analysis
 reveals which characteristics are associated with eventual citation outcomes. Because the
 underlying labels encode known social biases, we treat predictions descriptively rather than as
-measures of scientific merit (Section&nbsp;4.7).
+measures of scientific merit (Section&nbsp;4.9).
 </p>
 
 <p>
@@ -597,7 +597,7 @@ rather than of one projection method.
 
 <p>
 <strong>Takeaway for the supervised stage:</strong> topic membership alone carries impact
-information, obtained without any citation label. Section&nbsp;4.6 tests whether handing that
+information, obtained without any citation label. Section&nbsp;4.7 tests whether handing that
 information to the supervised models as explicit features actually helps.
 </p>
 
@@ -1683,7 +1683,7 @@ submission.
       <td>
         Data pipeline maintenance: arXiv/OpenAlex collection and merging, temporal cohort
         construction (C1/C2/C3), leakage-free preprocessing of text and metadata features, and
-        data-integrity checks on the cohort archives reported in Section&nbsp;4.8.
+        data-integrity checks on the cohort archives.
       </td>
     </tr>
     <tr>
@@ -1704,7 +1704,7 @@ submission.
     <tr>
       <td>Pyo, Jaechan</td>
       <td>
-        Random Forest regression and classification (Section&nbsp;4.4): baseline and tuned models,
+        <strong>Random Forest regression and classification:</strong> baseline and tuned models,
         <code>RandomizedSearchCV</code> hyperparameter search, cluster-augmented Random Forest
         ablation, permutation feature importance, and all RF figures and metric tables. Drafted the
         Random Forest results section.
@@ -1713,7 +1713,7 @@ submission.
     <tr>
       <td>Zhang, Haoming</td>
       <td>
-        <strong>XGBoost feature-stack experiments (Section&nbsp;4.5):</strong> XGBoost regressor and
+        <strong>XGBoost feature-stack experiments:</strong> XGBoost regressor and
         classifier with temporal-validation early stopping and F1-tuned decision thresholds; the
         four new feature blocks (full-text LSA, affiliation/country, venue identity, and
         leakage-safe author/reference history) including the OpenAlex enrichment pipeline behind
