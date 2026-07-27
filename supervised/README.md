@@ -1,8 +1,9 @@
-# Supervised Learning (phase 1) - Ridge + Logistic Regression baselines
+# Supervised Learning - phase 1 baselines + phase 2 nonlinear comparison
 
-This folder will hold the first supervised-learning pass for the project:
-simple, reproducible baselines that match the proposal before we add heavier
-models such as Random Forests and XGBoost.
+This folder holds the supervised-learning pass for the project. Phase 1 uses
+simple, reproducible baselines that match the proposal. Phase 2 adds one
+nonlinear classification model and one nonlinear regression model for direct
+comparison against those baselines.
 
 Phase 1 uses the **c1 cohort temporal split**:
 
@@ -34,7 +35,7 @@ ideas, but write train/test matrices and save the fitted transformers.
 
 ## Feature Set
 
-Phase 1 keeps the feature set close to the unsupervised analysis:
+The current supervised feature set keeps close to the unsupervised analysis:
 
 - text: `title + abstract`
 - text transform: TF-IDF -> TruncatedSVD / LSA
@@ -47,7 +48,7 @@ Do not use leakage fields such as `citations_total`, `citations_window`,
 `counts_by_year`, `citations_preprint`, `citations_published`, or
 `influential_citations`.
 
-Full text is intentionally left out of phase 1. It can be added later as a
+Full text is intentionally left out of phases 1-2. It can be added later as a
 heavier feature expansion.
 
 ## Models
@@ -66,7 +67,7 @@ Metrics:
   as ranking scores
 
 This is the main interpretable regression baseline for later comparison against
-Random Forest and XGBoost.
+XGBoost regression.
 
 ### Logistic Regression
 
@@ -87,12 +88,74 @@ Metrics:
 Using the train-derived threshold keeps the binary framing consistent with the
 temporal evaluation setup.
 
+### Phase 2: XGBoost Classification
+
+Task: predict the same train-defined top-decile high-citation label used by
+Logistic Regression.
+
+Comparison target:
+
+- Logistic Regression vs XGBoost Classifier
+
+The XGBoost Classifier uses a `binary:logistic` objective, `aucpr` early
+stopping, and `scale_pos_weight` for the rare high-citation class. It can model
+nonlinear interactions among LSA text dimensions, metadata, and category
+indicators while keeping the binary evaluation unchanged. The phase 2
+comparison table keeps the default `p >= 0.5` rows and also reports
+validation-F1-tuned threshold rows for Logistic Regression and XGBoost
+Classifier, with thresholds selected only on the latest training year.
+
+### Phase 2: XGBoost Regression
+
+Task: predict the same `y_log = log1p(target_citations)` target used by Ridge.
+
+Comparison targets:
+
+- Ridge Regression vs XGBoost Regressor on RMSE, MAE, R2, and Spearman
+- Ridge Regression vs XGBoost Regressor as ranking scores on Precision@10%,
+  Recall@10%, NDCG@10%, and Lift@10%
+
+XGBoost is early-stopped on the latest training year, then refit on the full
+train split using the selected number of trees. The temporal test split remains
+untouched until final evaluation.
+
+### Feature Ablations
+
+`run_feature_ablations.py` keeps the base supervised matrix unchanged and adds
+available non-leakage feature groups one at a time:
+
+- `base`
+- `base_plus_venue_identity`
+- `base_plus_venue_prestige`
+- `base_plus_field_topic`
+- `base_plus_affiliation_country`
+- `base_plus_full_text_lsa`
+- `all_available_extra_features`
+
+Full text is represented as capped `full_text` TF-IDF followed by LSA because
+the dataset does not include precomputed neural full-text embeddings. The
+default quick ablation uses the first 8,000 full-text characters, 30,000 TF-IDF
+terms, and 50 LSA dimensions; these can be increased after the first pass.
+Venue prestige is a train-only temporal target-encoding proxy: train rows use
+prior training years where available, and test rows use only train-derived venue
+statistics. The dataset does not include author names/IDs or cited-paper ID
+lists, so author prestige and reference graph features cannot be constructed
+without external data; `author_count` and `reference_count` are already in the
+base feature matrix.
+
 ## Planned Commands
 
 ```bash
 D:\conda\envs\cs7641-team7\python.exe supervised/run_features.py
 D:\conda\envs\cs7641-team7\python.exe supervised/run_baselines.py
 D:\conda\envs\cs7641-team7\python.exe supervised/run_cluster_augmented_baselines.py
+D:\conda\Scripts\conda.exe install -n cs7641-team7 -c conda-forge xgboost -y
+D:\conda\envs\cs7641-team7\python.exe supervised/run_phase2_tree_models.py
+D:\conda\envs\cs7641-team7\python.exe supervised/run_feature_ablations.py
+D:\conda\envs\cs7641-team7\python.exe supervised/run_feature_ablations.py --feature-sets base_plus_full_text_venue_identity base_plus_full_text_affiliation_country --output-prefix feature_ablation_combo
+D:\conda\envs\cs7641-team7\python.exe supervised/run_openalex_enrichment.py --cohort c1
+D:\conda\envs\cs7641-team7\python.exe supervised/run_train_history_ablation.py
+D:\conda\envs\cs7641-team7\python.exe supervised/run_final_feature_stack.py
 ```
 
 The scripts expect the full dataset at:
@@ -117,6 +180,8 @@ supervised/
     test_meta.csv.gz
     ridge_model.joblib
     logistic_model.joblib
+    xgboost_classifier.joblib
+    xgboost_regressor.joblib
   outputs/
     tables/
       regression_metrics.csv
@@ -125,11 +190,17 @@ supervised/
       regression_metrics_cluster_compare.csv
       ranking_metrics_cluster_compare.csv
       classification_metrics_cluster_compare.csv
+      final_feature_stack_classification.csv
+      final_feature_stack_regression.csv
+      final_feature_stack_ranking.csv
+      final_feature_stack_dimensions.csv
+      final_feature_stack_group_importance.csv
+      final_feature_stack_importance.csv
     figures/
       ridge_pred_vs_true.png
-      ridge_residuals.png
       logistic_pr_curve.png
       logistic_roc_curve.png
+      final_feature_stack_summary.png
   report/
     midterm_supervised_section.html
     midterm_supervised_section.tex
@@ -164,8 +235,60 @@ Phase 1 is complete when:
 4. metrics are written to CSV
 5. baseline figures are written for the report
 
-After this, phase 2 can add Random Forest, XGBoost, tuning, ablations, and
-feature-importance/SHAP analysis.
+## Phase 2 Completion Criteria
+
+Phase 2 is complete when:
+
+1. XGBoost Classifier runs on the top-decile citation label
+2. XGBoost Regressor runs on `y_log`
+3. phase 2 comparison CSVs include the original Ridge/Logistic rows plus the
+   new nonlinear-model rows
+4. phase 2 figures and feature-importance tables are written for the report
+5. the report discusses whether nonlinear models improve classification,
+   regression, and ranking performance over phase 1
+
+## Feature Ablation Completion Criteria
+
+Feature ablation is complete when:
+
+1. each feature set is trained with the same XGBoost classification and
+   regression settings
+2. classification, regression, and ranking ablation tables are written
+3. feature dimensions and feature-importance summaries identify which added
+   blocks carry signal
+4. unavailable requested features are explicitly documented rather than inferred
+   from leakage fields or external data
+
+## OpenAlex Train-History Features
+
+`run_openalex_enrichment.py` uses the local `openalex_id` field to fetch
+OpenAlex `authorships` and `referenced_works` identifiers. It stores only IDs
+and graph edges, not current citation counts or current author metrics.
+OpenAlex list requests may require an `OPENALEX_API_KEY` for full c1 enrichment;
+without one, use `--limit` for a small smoke test.
+
+`run_train_history_ablation.py` turns the enrichment into time-safe features
+using only c1 train rows:
+
+- train rows use only earlier train years
+- test rows use only earlier train rows
+- author features summarize prior paper count, prior high-impact rate, prior
+  log-citation history, and prior coauthor counts
+- reference features summarize references that match earlier train works,
+  including prior impact, age, and author overlap
+
+This gives us author/reference history signal without using 2026 author profiles
+or citation counts from outside the training split.
+
+## Unified Final Feature Stack
+
+`run_final_feature_stack.py` is the report-ready final experiment. It avoids
+mixing results from separate ablation pipelines by building full-text LSA,
+affiliation/country, venue identity, and train-only author/reference history
+blocks in one script, then evaluating all selected feature stacks with the same
+XGBClassifier and XGBoost regressor settings. The default route includes base,
+content-only, identity/content, history-only, and combined content+identity+
+history stacks.
 
 ## Environment
 
@@ -174,6 +297,7 @@ Use the clean `cs7641-team7` conda environment for this phase:
 ```bash
 conda create -n cs7641-team7 -c conda-forge python=3.12 numpy scipy scikit-learn pandas matplotlib joblib threadpoolctl -y
 conda install -n cs7641-team7 --override-channels -c conda-forge "libblas=*=*openblas" "liblapack=*=*openblas" -y
+conda install -n cs7641-team7 -c conda-forge xgboost -y
 ```
 
 The OpenBLAS variant avoids a Windows `0xc06d007f` DLL/threadpool failure seen

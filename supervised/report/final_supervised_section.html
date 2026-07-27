@@ -1,0 +1,296 @@
+<!-- ======================================================================
+  Final report - Supervised Learning section.
+  XGBoost stack rows are generated from final_feature_stack_*.csv; phase-1
+  Ridge/Logistic rows are carried over from the baseline output tables.
+  Copy supervised/outputs/figures/final_feature_stack_summary.png to
+  CS7641-Web/assets/img/final/ before publishing the web report.
+======================================================================= -->
+
+<section id="supervised-final">
+  <h2 class="section-title"><span class="section-num">4.</span> Supervised Learning: Unified XGBoost Feature-Stack Experiments</h2>
+
+  <p>
+    <strong>Setup.</strong> The final supervised stage keeps the same leakage-safe temporal
+    evaluation protocol as the midterm baseline. We train on c1 papers from 2018-2020
+    (24,691 papers) and evaluate once on the held-out 2021-2022 test split
+    (25,308 papers). The base representation is unchanged: title + abstract text is transformed
+    with train-fit TF-IDF, compressed to 100 LSA dimensions, and concatenated with scaled metadata
+    and one-hot primary category features. The classification label is the train-split top-decile
+    threshold: papers with at least <strong>41 citations</strong> within the 3-year target window
+    are positive. Because the test positive rate is only <strong>5.9%</strong>, PR-AUC is the
+    primary classification metric.
+  </p>
+
+  <p>
+    <strong>Unified experimental route.</strong> Earlier ablations tested content/identity
+    features and author/reference history in separate scripts. For the final analysis we reran them
+    in one coherent feature-stack pipeline. The script builds the selected final candidate blocks
+    once and evaluates every stack with the same XGBClassifier, XGBoost regressor, train/test split,
+    temporal validation year (2020), early stopping, and ranking evaluation. The feature stacks are:
+    base; base + full-text LSA; base + full-text LSA + affiliation/country; base + full-text LSA +
+    venue identity; base + author/reference history; and the corresponding combined history stacks.
+    This is block-level ablation, not greedy forward feature selection.
+  </p>
+
+  <p>
+    <strong>Feature blocks.</strong> In the tables below, "full text" denotes a TF-IDF-to-LSA
+    representation of the capped <code>full_text</code> field plus full-text length metadata.
+    "Affiliation" denotes multi-hot indicators for frequent training-set affiliations, together
+    with country indicators from the <code>countries</code> field. "Venue" denotes one-hot
+    indicators for frequent training-set venues from the <code>venue</code> field; the simpler
+    frequency encoding <code>venue_freq</code> is already part of the base metadata. "History"
+    denotes leakage-safe author/reference aggregates built from OpenAlex author and referenced-work
+    IDs: prior author productivity, prior author impact, prior high-impact rate, prior coauthor
+    counts, matched-reference prior impact, reference age, and author-reference overlap.
+  </p>
+
+  <p>
+    <strong>Leakage control.</strong> Full-text, affiliation/country, and venue features are fit or
+    encoded using train data and then applied to test. The author/reference features use OpenAlex
+    only to supply identifiers and edges; all impact aggregates are computed from earlier c1 train
+    labels. The enrichment covers <strong>49,305</strong> c1 papers, with <strong>98.3%</strong>
+    train coverage and <strong>99.1%</strong> test coverage. Train rows use only earlier train
+    years for author/reference aggregates, and test rows use only c1 train rows. We do not use
+    current OpenAlex citation counts, h-index, or other future-aware author metrics.
+  </p>
+
+  <p>
+    <strong>Classification results.</strong> XGBClassifier improves over Logistic Regression, and
+    the unified feature-stack rerun shows that content and history features are complementary. The
+    base XGBClassifier reaches test PR-AUC = <strong>0.214</strong> and tuned F1 =
+    <strong>0.287</strong>. Adding author/reference history raises PR-AUC to
+    <strong>0.254</strong> and F1 to <strong>0.326</strong>. Adding full-text LSA and identity
+    blocks on top of history gives a further but smaller gain: the best PR-AUC is
+    <strong>0.261</strong> for full text + venue identity + history, while the full stack reaches
+    the best F1 (<strong>0.335</strong>) and ROC-AUC (<strong>0.832</strong>). Thus the missing
+    combined models do matter, but their incremental gain over history-only is modest. The Logistic
+    Regression row uses the midterm baseline decision threshold <code>p &gt;= 0.5</code>; XGB rows
+    use thresholds tuned for F1 on the 2020 validation fold.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>PR-AUC</th>
+        <th>ROC-AUC</th>
+        <th>F1</th>
+        <th>Precision</th>
+        <th>Recall</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Logistic Regression</td>
+        <td>0.180</td>
+        <td>0.773</td>
+        <td>0.255</td>
+        <td>0.169</td>
+        <td>0.523</td>
+      </tr>
+      <tr>
+        <td>XGBClassifier</td>
+        <td>0.214</td>
+        <td>0.802</td>
+        <td>0.287</td>
+        <td>0.225</td>
+        <td>0.396</td>
+      </tr>
+      <tr>
+        <td>XGB + history</td>
+        <td>0.254</td>
+        <td>0.818</td>
+        <td>0.326</td>
+        <td>0.318</td>
+        <td>0.335</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + history</td>
+        <td>0.255</td>
+        <td>0.828</td>
+        <td>0.314</td>
+        <td>0.289</td>
+        <td>0.343</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + venue + history</td>
+        <td>0.261</td>
+        <td>0.830</td>
+        <td>0.318</td>
+        <td>0.298</td>
+        <td>0.342</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + affiliation + venue + history</td>
+        <td>0.260</td>
+        <td>0.832</td>
+        <td>0.335</td>
+        <td>0.279</td>
+        <td>0.417</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>Regression results.</strong> The unified rerun also changes the final regression
+    conclusion. Ridge obtains test RMSE = <strong>1.111</strong> and R<sup>2</sup> =
+    <strong>0.141</strong>. Base XGBoost improves to RMSE = <strong>1.071</strong> and
+    R<sup>2</sup> = <strong>0.202</strong>. History-only reaches RMSE =
+    <strong>1.049</strong> and R<sup>2</sup> = <strong>0.234</strong>. The combined stacks improve
+    further, with the full stack giving the best RMSE = <strong>1.040</strong> and R<sup>2</sup> =
+    <strong>0.246</strong>. The absolute R<sup>2</sup> is still modest, which is expected for
+    future citation counts: the target is heavy-tailed and partly driven by post-publication
+    diffusion effects that are not visible at publication time.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>RMSE</th>
+        <th>MAE</th>
+        <th>R<sup>2</sup></th>
+        <th>Spearman</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Ridge</td>
+        <td>1.111</td>
+        <td>0.880</td>
+        <td>0.141</td>
+        <td>0.395</td>
+      </tr>
+      <tr>
+        <td>XGBoost</td>
+        <td>1.071</td>
+        <td>0.853</td>
+        <td>0.202</td>
+        <td>0.464</td>
+      </tr>
+      <tr>
+        <td>XGB + history</td>
+        <td>1.049</td>
+        <td>0.837</td>
+        <td>0.234</td>
+        <td>0.481</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + history</td>
+        <td>1.045</td>
+        <td>0.833</td>
+        <td>0.240</td>
+        <td>0.489</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + affiliation + history</td>
+        <td>1.043</td>
+        <td>0.832</td>
+        <td>0.242</td>
+        <td>0.490</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + affiliation + venue + history</td>
+        <td>1.040</td>
+        <td>0.828</td>
+        <td>0.246</td>
+        <td>0.488</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <strong>Ranking results.</strong> Ranking remains the most practically useful view of the task.
+    When predictions are used to select the top 10% of test papers, Ridge has Precision@10% =
+    <strong>0.200</strong> and NDCG@10% = <strong>0.633</strong>. Base XGBoost improves to
+    <strong>0.235</strong> and <strong>0.663</strong>. History-only reaches Precision@10% =
+    <strong>0.278</strong> and NDCG@10% = <strong>0.721</strong>. The best NDCG comes from the
+    simpler combined stack full-text LSA + history, with Precision@10% = <strong>0.285</strong>,
+    Recall@10% = <strong>0.483</strong>, NDCG@10% = <strong>0.725</strong>, and Lift@10% =
+    <strong>4.83x</strong>. Adding affiliation and venue identity slightly improves regression and
+    classification, but does not improve ranking NDCG beyond full text + history.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Precision@10%</th>
+        <th>Recall@10%</th>
+        <th>NDCG@10%</th>
+        <th>Lift@10%</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Ridge</td>
+        <td>0.200</td>
+        <td>0.339</td>
+        <td>0.633</td>
+        <td>3.39x</td>
+      </tr>
+      <tr>
+        <td>XGBoost</td>
+        <td>0.235</td>
+        <td>0.399</td>
+        <td>0.663</td>
+        <td>3.99x</td>
+      </tr>
+      <tr>
+        <td>XGB + history</td>
+        <td>0.278</td>
+        <td>0.471</td>
+        <td>0.721</td>
+        <td>4.71x</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + history</td>
+        <td>0.285</td>
+        <td>0.483</td>
+        <td>0.725</td>
+        <td>4.83x</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + affiliation + history</td>
+        <td>0.282</td>
+        <td>0.479</td>
+        <td>0.723</td>
+        <td>4.79x</td>
+      </tr>
+      <tr>
+        <td>XGB + full text + affiliation + venue + history</td>
+        <td>0.285</td>
+        <td>0.483</td>
+        <td>0.723</td>
+        <td>4.83x</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../../assets/img/final/final_feature_stack_summary.png"
+         alt="Bar chart comparing final XGBoost feature stacks on PR-AUC, F1, and NDCG at 10 percent" />
+    <figcaption>
+      Final XGBoost feature-stack summary on the held-out test split. PR-AUC and F1 come
+      from the classifier, with F1 using the validation-tuned decision threshold. NDCG@10%
+      comes from ranking test papers by the regressor score.
+    </figcaption>
+  </figure>
+
+  <p>
+    <strong>Interpretation.</strong> The corrected unified experiment supports a more careful
+    conclusion than the earlier separated ablations. First, nonlinear models improve over the
+    linear baselines, so interactions among text, metadata, category, and history features matter.
+    Second, author/reference history is the largest single new source of signal, but it is not the
+    whole story: adding full-text LSA to history improves ranking and regression. Third,
+    affiliation/country and venue identity are useful but mostly marginal once text and history are
+    present. Feature-importance aggregation for the full stack is consistent with this: for the
+    XGBClassifier, title/abstract LSA (0.382), full-text LSA (0.241), author history (0.102), venue
+    identity (0.090), and reference history (0.056) all contribute measurable signal. For the
+    XGBoost regressor, the largest groups are title/abstract LSA (0.247), venue identity (0.219),
+    full-text LSA (0.182), author history (0.091), numeric metadata (0.088), affiliation (0.064),
+    and reference history (0.052). Overall, exact citation-count prediction remains difficult, but
+    the unified XGBoost feature-stack pipeline provides a stronger and logically consistent system
+    for early high-impact paper detection and ranking.
+  </p>
+</section>
