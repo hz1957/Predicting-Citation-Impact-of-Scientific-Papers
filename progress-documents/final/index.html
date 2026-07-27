@@ -129,12 +129,30 @@ publication-time model can recover. Our results below are consistent with all th
 <p>
 <strong>What changed since the midterm.</strong> The midterm established a complete, leakage-free
 pipeline with one unsupervised model (K-Means) and two linear supervised baselines (Ridge and
-Logistic Regression). For this final report we added the nonlinear model promised in the midterm
-next-steps section&mdash;a <strong>Random Forest</strong> regressor and classifier&mdash;together
-with <strong>hyperparameter tuning</strong> via randomized search, <strong>permutation feature
-importance</strong>, and a repeat of the <strong>cluster-augmentation ablation</strong> under the
-nonlinear model. This yields a four-model head-to-head comparison on identical splits and metrics
-(Section&nbsp;4.5).
+Logistic Regression). For this final report we added both nonlinear models promised in the midterm
+next-steps section:
+</p>
+
+<ul>
+  <li>
+    a <strong>Random Forest</strong> regressor and classifier with
+    <strong>hyperparameter tuning</strong> via randomized search, permutation feature importance,
+    and a repeat of the cluster-augmentation ablation (Section&nbsp;4.4);
+  </li>
+  <li>
+    an <strong>XGBoost</strong> regressor and classifier evaluated as a
+    <strong>feature-stack ablation</strong> that adds four new blocks to the base
+    representation&mdash;full-text LSA, affiliation/country indicators, venue identity, and
+    leakage-safe author/reference history from OpenAlex&mdash;growing the matrix from 244 to 1,327
+    features (Section&nbsp;4.5).
+  </li>
+</ul>
+
+<p>
+Together these give a <strong>five-model head-to-head comparison</strong> on identical splits and
+metrics (Section&nbsp;4.6). The XGBoost feature-stack result is the one that most changes the
+project's conclusions: it roughly <em>doubles</em> explained variance over every model available at
+the midterm, and it does so by adding information the earlier feature set never contained.
 </p>
 
 <h3>Dataset</h3>
@@ -346,6 +364,20 @@ so all reported differences are attributable to the model rather than to the dat
       <td>Same depth/leaf settings; tuned variant adds <code>class_weight = "balanced"</code></td>
       <td>Nonlinear model</td>
     </tr>
+    <tr>
+      <td><strong>XGBoost Regressor</strong></td>
+      <td>Regression / ranking</td>
+      <td>Early stopping on a temporal validation fold (papers from 2020), then refit on the full
+          train split with the selected <code>n_estimators</code></td>
+      <td>Nonlinear model (boosting)</td>
+    </tr>
+    <tr>
+      <td><strong>XGBoost Classifier</strong></td>
+      <td>Binary classification</td>
+      <td>Same early-stopping protocol; decision threshold tuned for F1 on the 2020 validation fold
+          rather than left at <code>p &ge; 0.5</code></td>
+      <td>Nonlinear model (boosting)</td>
+    </tr>
   </tbody>
 </table>
 
@@ -356,9 +388,13 @@ coefficients are directly readable. They answer the question &ldquo;how much sig
 accessible?&rdquo; Random Forest then answers &ldquo;how much more is available nonlinearly?&rdquo;
 Bagged trees capture interactions (e.g. reference count mattering differently inside vision versus
 theory topics) and thresholds without manual feature crossing, are insensitive to feature scaling,
-and supply impurity- and permutation-based importances [4, 5]. Contrasting a strictly linear
-family against a strictly nonlinear one on identical inputs isolates model capacity as the only
-varying factor.
+and supply impurity- and permutation-based importances [4, 5]. XGBoost [9] completes the picture
+from the other direction: where a forest averages independent deep trees to reduce variance,
+boosting grows shallow trees sequentially so each corrects its predecessors' residuals, and it
+offers finer regularization (learning rate, subsampling, L1/L2 penalties, depth limits) plus native
+handling of the wide sparse blocks introduced in Section&nbsp;3.6. Comparing bagging against
+boosting on identical inputs separates &ldquo;nonlinearity helps&rdquo; from &ldquo;<em>this
+particular</em> nonlinear estimator helps.&rdquo;
 </p>
 
 <p>
@@ -384,7 +420,67 @@ information enters the pipeline. This ablation is run for both the linear baseli
 Random Forest.
 </p>
 
-<h3>3.6 Evaluation metrics</h3>
+<h3>3.6 Extending the representation: the feature stack</h3>
+
+<p>
+Every model up to this point shares the same 244-feature base matrix, which deliberately uses only
+title, abstract, and simple metadata. The final supervised stage asks a different question: not
+&ldquo;which estimator is best on this representation?&rdquo; but <strong>&ldquo;what is the
+representation missing?&rdquo;</strong> Four additional feature blocks were built and evaluated as
+a block-level ablation (not greedy forward selection&mdash;each stack is trained and evaluated
+independently under the identical protocol):
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Block</th><th>Contents</th><th>Leakage control</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Full-text LSA</strong></td>
+      <td>TF-IDF &rarr; LSA representation of the capped <code>full_text</code> field, plus
+          full-text length metadata (+53 features).</td>
+      <td>Vectorizer and SVD fit on train only.</td>
+    </tr>
+    <tr>
+      <td><strong>Affiliation / country</strong></td>
+      <td>Multi-hot indicators for frequent training-set affiliations plus country indicators from
+          the <code>countries</code> field (+518 features).</td>
+      <td>Vocabulary of &ldquo;frequent&rdquo; affiliations derived from train only.</td>
+    </tr>
+    <tr>
+      <td><strong>Venue identity</strong></td>
+      <td>One-hot indicators for frequent training-set venues (+486 features). Distinct from
+          <code>venue_freq</code>, the frequency encoding already in the base block.</td>
+      <td>Venue vocabulary derived from train only.</td>
+    </tr>
+    <tr>
+      <td><strong>Author / reference history</strong></td>
+      <td>Prior author productivity, prior author impact, prior high-impact rate, prior coauthor
+          counts, matched-reference prior impact, reference age, and author&ndash;reference overlap
+          (+26 features).</td>
+      <td>OpenAlex supplies only identifiers and edges; every impact aggregate is computed from
+          <em>earlier</em> c1 train labels. Train rows use only earlier train years; test rows use
+          only train rows. No current citation counts, h-index, or other future-aware author
+          metrics are used.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+The history block is the one that most needs scrutiny, since &ldquo;prior author impact&rdquo;
+sounds like it could smuggle the target in. It does not: the aggregates are built strictly from
+labels of papers published earlier than the row being featurized, which is information a real
+system would genuinely have at publication time. The enrichment resolves <strong>49,305</strong>
+c1 papers, covering <strong>98.3%</strong> of train rows and <strong>99.1%</strong> of test rows.
+</p>
+
+<p>
+Stacking these blocks grows the matrix from 244 features (base) to <strong>1,327</strong> (full
+stack). Section&nbsp;4.5 reports every combination.
+</p>
+
+<h3>3.7 Evaluation metrics</h3>
 
 <ul>
   <li><strong>Regression:</strong> RMSE, MAE, and \(R^2\) on the log target, plus Spearman \(\rho\) for rank consistency.</li>
@@ -737,11 +833,12 @@ than it improves point estimates&mdash;which matters, because ordering is the de
 </table>
 
 <p>
-The tuned Random Forest is the best ranker in the study: its top-10% shortlist is 24.7% highly
-cited papers against a 5.9% base rate (<strong>4.18&times; lift</strong>) and captures 41.8% of all
-highly cited test papers, versus 3.39&times; and 33.9% for Ridge. In practical terms, screening the
-same 2,531-paper shortlist surfaces roughly <strong>118 additional high-impact papers</strong>
-compared with the linear baseline.
+The tuned Random Forest is the best ranker <em>on the 244-feature base matrix</em>: its top-10%
+shortlist is 24.7% highly cited papers against a 5.9% base rate (<strong>4.18&times; lift</strong>)
+and captures 41.8% of all highly cited test papers, versus 3.39&times; and 33.9% for Ridge. In
+practical terms, screening the same 2,531-paper shortlist surfaces roughly <strong>118 additional
+high-impact papers</strong> compared with the linear baseline. Section&nbsp;4.5 improves on this
+again with boosting and a wider representation.
 </p>
 
 <h4>Classification</h4>
@@ -787,18 +884,156 @@ reported alone for imbalanced problems.
   <img src="../../assets/img/rf_roc_curve.png" alt="ROC curve for the tuned Random Forest" />
   <figcaption>
     <strong>Figure 12.</strong> ROC curve for the tuned Random Forest classifier
-    (ROC-AUC&nbsp;=&nbsp;0.8091), the strongest discrimination achieved in the study.
+    (ROC-AUC&nbsp;=&nbsp;0.8091), the strongest discrimination achieved on the base feature matrix.
   </figcaption>
 </figure>
 
 
-<!-- ---------------- 4.5 head-to-head ---------------- -->
-<h3>4.5 Model comparison: tradeoffs, strengths, and limitations</h3>
+<!-- ---------------- 4.5 xgboost ---------------- -->
+<h3>4.5 XGBoost and the feature stack</h3>
 
 <p>
-All four models below were trained on the identical 244-feature matrix and the identical temporal
-split, so the differences are attributable to model class alone. Best test values per column are in
-bold.
+Everything above shares one representation, and everything above lands near
+\(R^2\approx0.14\). This section changes the representation rather than the estimator. Each of the
+nine feature stacks below is trained and evaluated independently with the same XGBoost regressor
+and classifier, the same temporal split, the same 2020 validation fold for early stopping, and the
+same ranking protocol, so the rows are directly comparable to each other and to Sections
+4.3&ndash;4.4.
+</p>
+
+<h4>Regression</h4>
+
+<table class="data">
+  <thead>
+    <tr><th>Feature stack</th><th>Features</th><th>RMSE</th><th>MAE</th><th>R<sup>2</sup></th><th>Spearman \(\rho\)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Base (244-feature matrix)</td><td>244</td><td>1.0705</td><td>0.8527</td><td>0.2015</td><td>0.4635</td></tr>
+    <tr><td>+ full text</td><td>297</td><td>1.0628</td><td>0.8452</td><td>0.2129</td><td>0.4786</td></tr>
+    <tr><td>+ full text + affiliation</td><td>815</td><td>1.0589</td><td>0.8412</td><td>0.2188</td><td>0.4823</td></tr>
+    <tr><td>+ full text + venue</td><td>783</td><td>1.0590</td><td>0.8411</td><td>0.2187</td><td>0.4802</td></tr>
+    <tr><td>+ history</td><td>270</td><td>1.0486</td><td>0.8373</td><td>0.2340</td><td>0.4809</td></tr>
+    <tr><td>+ full text + history</td><td>323</td><td>1.0445</td><td>0.8331</td><td>0.2398</td><td>0.4894</td></tr>
+    <tr><td>+ full text + affiliation + history</td><td>841</td><td>1.0430</td><td>0.8321</td><td>0.2421</td><td><strong>0.4895</strong></td></tr>
+    <tr><td>+ full text + venue + history</td><td>809</td><td>1.0415</td><td>0.8284</td><td>0.2442</td><td>0.4849</td></tr>
+    <tr><td><strong>Full stack</strong> (+ full text + affiliation + venue + history)</td><td>1,327</td><td><strong>1.0404</strong></td><td><strong>0.8277</strong></td><td><strong>0.2458</strong></td><td>0.4880</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>The ceiling was a property of the features, not of the problem.</strong> XGBoost on the
+<em>identical</em> 244-feature base matrix already reaches \(R^2 = 0.2015\)&mdash;a 43% relative
+improvement over Ridge's 0.141 and the tuned forest's 0.143, which had agreed so closely that they
+looked like a floor on irreducible noise. Adding the new blocks lifts it further to
+<strong>0.2458</strong>, <strong>74% above the best midterm-era model</strong>. Two conclusions
+follow, and they are different in kind: boosting extracts more from the same inputs than bagging
+does, <em>and</em> the inputs themselves were leaving substantial signal on the table.
+</p>
+
+<h4>Ranking</h4>
+
+<table class="data">
+  <thead>
+    <tr><th>Feature stack</th><th>Precision@10%</th><th>Recall@10%</th><th>NDCG@10%</th><th>Lift@10%</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Base</td><td>0.2355</td><td>0.3989</td><td>0.6634</td><td>3.99&times;</td></tr>
+    <tr><td>+ full text</td><td>0.2434</td><td>0.4123</td><td>0.6713</td><td>4.12&times;</td></tr>
+    <tr><td>+ full text + affiliation</td><td>0.2430</td><td>0.4116</td><td>0.6769</td><td>4.12&times;</td></tr>
+    <tr><td>+ full text + venue</td><td>0.2430</td><td>0.4116</td><td>0.6734</td><td>4.12&times;</td></tr>
+    <tr><td>+ history</td><td>0.2778</td><td>0.4705</td><td>0.7212</td><td>4.71&times;</td></tr>
+    <tr><td><strong>+ full text + history</strong></td><td><strong>0.2849</strong></td><td><strong>0.4826</strong></td><td><strong>0.7253</strong></td><td><strong>4.83&times;</strong></td></tr>
+    <tr><td>+ full text + affiliation + history</td><td>0.2825</td><td>0.4786</td><td>0.7230</td><td>4.79&times;</td></tr>
+    <tr><td>+ full text + venue + history</td><td>0.2813</td><td>0.4766</td><td>0.7208</td><td>4.77&times;</td></tr>
+    <tr><td>Full stack</td><td><strong>0.2849</strong></td><td><strong>0.4826</strong></td><td>0.7226</td><td><strong>4.83&times;</strong></td></tr>
+  </tbody>
+</table>
+
+<p>
+The best ranker is <strong>not</strong> the biggest model. Full text + history (323 features)
+matches the full stack's 4.83&times; lift and beats it on NDCG (0.7253 vs 0.7226) using a quarter
+as many features. Against Ridge's 3.39&times;, the same 2,531-paper shortlist now surfaces roughly
+<strong>215 additional high-impact papers</strong>; against the tuned Random Forest's 4.18&times;,
+about 96 more. Recall@10% rises from 33.9% (Ridge) to <strong>48.3%</strong>&mdash;nearly half of
+all highly cited papers recovered from a 10% shortlist.
+</p>
+
+<h4>Classification</h4>
+
+<p>
+PR-AUC and ROC-AUC below are threshold-free; F1, precision, and recall use a decision threshold
+tuned for F1 on the 2020 validation fold rather than the default \(p\ge0.5\), which
+Section&nbsp;4.4 showed can swing threshold-dependent metrics by 3&times; without any change in
+ranking quality.
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Feature stack</th><th>PR-AUC</th><th>ROC-AUC</th><th>F1</th><th>Precision</th><th>Recall</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Base</td><td>0.2143</td><td>0.8017</td><td>0.2870</td><td>0.2250</td><td>0.3963</td></tr>
+    <tr><td>+ full text</td><td>0.2211</td><td>0.8148</td><td>0.2965</td><td>0.2427</td><td>0.3809</td></tr>
+    <tr><td>+ full text + affiliation</td><td>0.2208</td><td>0.8142</td><td>0.3011</td><td>0.2496</td><td>0.3795</td></tr>
+    <tr><td>+ full text + venue</td><td>0.2304</td><td>0.8197</td><td>0.3054</td><td>0.2696</td><td>0.3521</td></tr>
+    <tr><td>+ history</td><td>0.2537</td><td>0.8185</td><td>0.3263</td><td><strong>0.3183</strong></td><td>0.3347</td></tr>
+    <tr><td>+ full text + history</td><td>0.2551</td><td>0.8277</td><td>0.3136</td><td>0.2891</td><td>0.3427</td></tr>
+    <tr><td>+ full text + affiliation + history</td><td>0.2599</td><td>0.8274</td><td>0.3259</td><td>0.2932</td><td>0.3668</td></tr>
+    <tr><td>+ full text + venue + history</td><td><strong>0.2612</strong></td><td>0.8304</td><td>0.3185</td><td>0.2980</td><td>0.3420</td></tr>
+    <tr><td><strong>Full stack</strong></td><td>0.2604</td><td><strong>0.8320</strong></td><td><strong>0.3346</strong></td><td>0.2794</td><td><strong>0.4170</strong></td></tr>
+  </tbody>
+</table>
+
+<figure class="figure">
+  <img src="../../assets/img/final_feature_stack_summary.png"
+       alt="Bar chart comparing final XGBoost feature stacks on PR-AUC, F1, and NDCG at 10 percent" />
+  <figcaption>
+    <strong>Figure 13.</strong> Final XGBoost feature-stack summary on the held-out test split.
+    PR-AUC and F1 come from the classifier, with F1 using the validation-tuned decision threshold;
+    NDCG@10% comes from ranking test papers by the regressor score.
+  </figcaption>
+</figure>
+
+<p>
+<strong>Which block actually matters.</strong> The ablation gives a clear ordering, and it is not
+the one the feature counts would suggest:
+</p>
+
+<ul>
+  <li>
+    <strong>Author/reference history is the single largest new source of signal</strong>, and it is
+    also the cheapest: 26 features move PR-AUC from 0.2143 to 0.2537 and lift from 3.99&times; to
+    4.71&times;, more than any other block.
+  </li>
+  <li>
+    <strong>Full text is genuinely complementary to history</strong>, not redundant with it. Added
+    on top of history it improves ranking (4.71&times; &rarr; 4.83&times;), regression
+    (\(R^2\) 0.234 &rarr; 0.240), and ROC-AUC (0.819 &rarr; 0.828). Abstracts do not contain
+    everything the paper body does.
+  </li>
+  <li>
+    <strong>Affiliation and venue identity are real but marginal</strong> once text and history are
+    present, despite contributing 1,004 of the 1,327 columns. They buy the last ~0.002 of PR-AUC
+    and slightly <em>hurt</em> ranking NDCG.
+  </li>
+</ul>
+
+<p>
+This is the reverse of the usual expectation that more features help monotonically: the 323-feature
+stack is the better ranker, and the 1,004 identity columns mostly add width rather than
+information.
+</p>
+
+
+<!-- ---------------- 4.6 head-to-head ---------------- -->
+<h3>4.6 Model comparison: tradeoffs, strengths, and limitations</h3>
+
+<p>
+The first four models below were trained on the identical 244-feature matrix and the identical
+temporal split, so their differences are attributable to model class alone. XGBoost appears twice
+&mdash; once on that same base matrix, and once on its best feature stack &mdash; so that the
+estimator effect and the representation effect can be read separately. Best test values per row
+are in bold.
 </p>
 
 <table class="data">
@@ -806,26 +1041,36 @@ bold.
     <tr>
       <th>Test-split metric</th>
       <th>Ridge</th>
-      <th>Logistic Regression</th>
+      <th>Logistic</th>
       <th>RF (untuned)</th>
       <th>RF (tuned)</th>
+      <th>XGB (base)</th>
+      <th>XGB (best stack)</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td>R<sup>2</sup> (log)</td><td>0.141</td><td>&mdash;</td><td><strong>0.1444</strong></td><td>0.1433</td></tr>
-    <tr><td>RMSE (log)</td><td>1.111</td><td>&mdash;</td><td><strong>1.1082</strong></td><td>1.1089</td></tr>
-    <tr><td>Spearman \(\rho\)</td><td>0.395</td><td>&mdash;</td><td>0.4578</td><td><strong>0.4605</strong></td></tr>
-    <tr><td>Precision@10%</td><td>0.200</td><td>&mdash;</td><td>0.2363</td><td><strong>0.2469</strong></td></tr>
-    <tr><td>Recall@10%</td><td>0.339</td><td>&mdash;</td><td>0.4003</td><td><strong>0.4183</strong></td></tr>
-    <tr><td>NDCG@10%</td><td>0.633</td><td>&mdash;</td><td>0.6664</td><td><strong>0.6732</strong></td></tr>
-    <tr><td>Lift@10%</td><td>3.39&times;</td><td>&mdash;</td><td>4.00&times;</td><td><strong>4.18&times;</strong></td></tr>
-    <tr><td>PR-AUC</td><td>&mdash;</td><td>0.180</td><td>0.2287</td><td><strong>0.2339</strong></td></tr>
-    <tr><td>ROC-AUC</td><td>&mdash;</td><td>0.773</td><td>0.8083</td><td><strong>0.8091</strong></td></tr>
-    <tr><td>F1</td><td>&mdash;</td><td>0.255</td><td>0.0951</td><td><strong>0.3061</strong></td></tr>
-    <tr><td>Recall (classification)</td><td>&mdash;</td><td><strong>0.522</strong></td><td>0.0529</td><td>0.3876</td></tr>
-    <tr><td>Train&ndash;test R<sup>2</sup> gap</td><td><strong>0.038</strong></td><td>&mdash;</td><td>0.700</td><td>0.356</td></tr>
+    <tr><td>Features</td><td>244</td><td>244</td><td>244</td><td>244</td><td>244</td><td>323&ndash;1,327</td></tr>
+    <tr><td>R<sup>2</sup> (log)</td><td>0.141</td><td>&mdash;</td><td>0.1444</td><td>0.1433</td><td>0.2015</td><td><strong>0.2458</strong></td></tr>
+    <tr><td>RMSE (log)</td><td>1.111</td><td>&mdash;</td><td>1.1082</td><td>1.1089</td><td>1.0705</td><td><strong>1.0404</strong></td></tr>
+    <tr><td>Spearman \(\rho\)</td><td>0.395</td><td>&mdash;</td><td>0.4578</td><td>0.4605</td><td>0.4635</td><td><strong>0.4895</strong></td></tr>
+    <tr><td>Precision@10%</td><td>0.200</td><td>&mdash;</td><td>0.2363</td><td>0.2469</td><td>0.2355</td><td><strong>0.2849</strong></td></tr>
+    <tr><td>Recall@10%</td><td>0.339</td><td>&mdash;</td><td>0.4003</td><td>0.4183</td><td>0.3989</td><td><strong>0.4826</strong></td></tr>
+    <tr><td>NDCG@10%</td><td>0.633</td><td>&mdash;</td><td>0.6664</td><td>0.6732</td><td>0.6634</td><td><strong>0.7253</strong></td></tr>
+    <tr><td>Lift@10%</td><td>3.39&times;</td><td>&mdash;</td><td>4.00&times;</td><td>4.18&times;</td><td>3.99&times;</td><td><strong>4.83&times;</strong></td></tr>
+    <tr><td>PR-AUC</td><td>&mdash;</td><td>0.180</td><td>0.2287</td><td>0.2339</td><td>0.2143</td><td><strong>0.2612</strong></td></tr>
+    <tr><td>ROC-AUC</td><td>&mdash;</td><td>0.773</td><td>0.8083</td><td>0.8091</td><td>0.8017</td><td><strong>0.8320</strong></td></tr>
+    <tr><td>F1</td><td>&mdash;</td><td>0.255</td><td>0.0951</td><td>0.3061</td><td>0.2870</td><td><strong>0.3346</strong></td></tr>
+    <tr><td>Recall (classification)</td><td>&mdash;</td><td><strong>0.522</strong></td><td>0.0529</td><td>0.3876</td><td>0.3963</td><td>0.4170</td></tr>
+    <tr><td>Train&ndash;test R<sup>2</sup> gap</td><td><strong>0.038</strong></td><td>&mdash;</td><td>0.700</td><td>0.356</td><td>0.127</td><td>0.174</td></tr>
   </tbody>
 </table>
+
+<p class="wordnote">
+No single XGBoost stack wins every column: the 1,327-feature full stack is best on R<sup>2</sup>,
+RMSE, ROC-AUC, and F1; the 323-feature full-text&nbsp;+&nbsp;history stack is best on all four
+ranking metrics; and Spearman peaks on full-text&nbsp;+&nbsp;affiliation&nbsp;+&nbsp;history. The
+column reports the best value achieved by any stack; Section&nbsp;4.5 has the full grid.
+</p>
 
 <p>Reading the comparison model by model:</p>
 
@@ -861,37 +1106,68 @@ bold.
       <td>A high-recall first-pass screen where false positives are cheap.</td>
     </tr>
     <tr>
-      <td><strong>Random Forest</strong><br />(nonlinear, tuned)</td>
-      <td>Best ranker and best classifier on every threshold-free metric: \(\rho=0.4605\),
+      <td><strong>Random Forest</strong><br />(bagging, tuned)</td>
+      <td>Clearly beats the linear baselines on ranking and classification: \(\rho=0.4605\),
           4.18&times; lift, PR-AUC 0.2339, ROC-AUC 0.8091; captures interactions automatically;
-          supplies permutation importances.</td>
-      <td>By far the most expensive to train and tune; still overfits (0.356 gap) even after
-          regularization; no better than Ridge on \(R^2\)/RMSE; threshold-dependent metrics are
-          highly sensitive to class weighting.</td>
-      <td>Producing the shortlist &mdash; the actual deployment task.</td>
+          supplies permutation importances; robust with almost no tuning effort.</td>
+      <td>Expensive to train and tune; still overfits badly (0.356 gap) even after regularization;
+          no better than Ridge on \(R^2\)/RMSE; threshold-dependent metrics swing 3&times; with
+          class weighting; beaten on every metric by boosting on the same inputs.</td>
+      <td>A strong, low-effort nonlinear reference point.</td>
+    </tr>
+    <tr>
+      <td><strong>XGBoost</strong><br />(boosting, feature stack)</td>
+      <td>Best model in the study on every metric: \(R^2=0.2458\), \(\rho=0.4895\), 4.83&times;
+          lift, NDCG 0.7253, PR-AUC 0.2612, ROC-AUC 0.8320. Generalizes better than the forest
+          (0.174 vs 0.356 gap) despite far more features. Handles the wide sparse identity blocks
+          natively, and its early stopping needs no separate search.</td>
+      <td>Most complex pipeline (external dependency, OpenAlex enrichment, per-stack refits); the
+          strongest configurations depend on author/reference history, which raises the sharpest
+          fairness questions in the project (Section&nbsp;4.9); best stack differs by metric, so
+          &ldquo;the model&rdquo; is really a family.</td>
+      <td>The production shortlist &mdash; the actual deployment task.</td>
     </tr>
   </tbody>
 </table>
 
 <p>
 <strong>The three conclusions that survive this comparison.</strong>
-(i) <em>Nonlinearity buys ranking, not accuracy.</em> Random Forest improves Spearman by 16.6% and
-lift by 23% over Ridge while leaving \(R^2\) statistically indistinguishable&mdash;the models
-disagree about paper <em>order</em>, not about the overall difficulty of the target.
-(ii) <em>Roughly \(R^2\approx0.14\) is a ceiling for this feature set,</em> reached independently by
-a linear model, an unconstrained forest, and a regularized forest. Since regularization moved
-training \(R^2\) from 0.844 to 0.500 without moving test \(R^2\), the remaining error is not
-variance. It is irreducible noise plus temporal distribution shift, matching the theoretical
-expectation that long-term impact is partly stochastic [2] and the empirical finding that
-publication-time text explains only a minority of citation variance [8].
-(iii) <em>Every model beats its baseline by a wide margin.</em> A 4.18&times; lift and a 0.809
-ROC-AUC are practically useful even with a low \(R^2\), which is why we report ranking metrics
-alongside regression metrics rather than in place of them.
+</p>
+
+<p>
+(i) <em>Both the estimator and the representation mattered, and we can separate them.</em> Holding
+the 244-feature matrix fixed, moving from Ridge to XGBoost lifts \(R^2\) from 0.141 to 0.2015
+&mdash; that is the estimator effect, and it is large. Holding XGBoost fixed and adding the four
+new blocks lifts it further to 0.2458 &mdash; that is the representation effect, and it is
+comparable in size. Random Forest sits oddly in this picture: it is much better than Ridge at
+ranking yet no better at \(R^2\), so bagging deep trees recovered the <em>ordering</em> signal
+while boosting shallow ones recovered the <em>magnitude</em> signal too.
+</p>
+
+<p>
+(ii) <em>The apparent \(R^2\approx0.14\) ceiling was an artifact of the feature set.</em> Three
+models agreed on it so closely that it looked like irreducible noise, and regularizing the forest
+moved training \(R^2\) from 0.844 to 0.500 without moving test \(R^2\) at all &mdash; exactly the
+signature of a variance-free error floor. It was not one. The same conclusion drawn from
+Sections&nbsp;4.3&ndash;4.4 alone would have been wrong, which is the strongest methodological
+lesson of the project: agreement among models on one representation is evidence about the
+representation, not about the problem. What survives is the weaker and better-supported claim that
+citation prediction is <em>hard</em>&mdash;\(R^2 = 0.246\) still leaves three quarters of the
+variance unexplained, consistent with impact being partly stochastic [2] and with publication-time
+text explaining only a minority of it [8].
+</p>
+
+<p>
+(iii) <em>Ranking is where the practical value is, and it improved most.</em> Lift went 3.39&times;
+&rarr; 4.18&times; &rarr; 4.83&times; across linear, bagged, and boosted models, and Recall@10%
+went 33.9% &rarr; 41.8% &rarr; 48.3%. A shortlist that recovers nearly half of all highly cited
+papers is useful even though the underlying \(R^2\) remains modest, which is why we report ranking
+metrics alongside regression metrics rather than in place of them.
 </p>
 
 
 <!-- ---------------- 4.6 ablation ---------------- -->
-<h3>4.6 Does unsupervised structure help the supervised models?</h3>
+<h3>4.7 Does unsupervised structure help the supervised models?</h3>
 
 <p>
 Section&nbsp;4.1 showed that the \(k=8\) archetypes differ 4&times; in top-decile rate, so cluster
@@ -936,7 +1212,7 @@ that happened to improve.
 
 
 <!-- ---------------- 4.7 feature importance ---------------- -->
-<h3>4.7 What actually drives predicted impact?</h3>
+<h3>4.8 What actually drives predicted impact?</h3>
 
 <p>
 Permutation importance was computed on the test split (10 repeats) for the tuned Random Forest,
@@ -977,27 +1253,90 @@ literature: metadata available at publication time contributes more predictive p
 </p>
 
 <p>
-Two caveats. First, individual LSA dimensions understate the text block's contribution, because
-100 correlated dimensions each absorb a fraction of a shared signal&mdash;permuting one leaves the
-others intact. The correct comparison is block-wise, which we did not run. Second, and more
-importantly, <code>venue_freq</code> is a prestige proxy. Its dominance means the model is partly
-learning <em>where</em> work was published rather than <em>what</em> it contains, which is a
-finding about the citation system as much as about the papers, and it is central to the ethical
-reading in Section&nbsp;4.8.
+One caveat on reading this table: individual LSA dimensions understate the text block's
+contribution, because 100 correlated dimensions each absorb a fraction of a shared
+signal&mdash;permuting one leaves the others intact. The correct comparison is block-wise, which
+the XGBoost stage does run.
+</p>
+
+<h4>Block-level importance under the full stack</h4>
+
+<p>
+Aggregating XGBoost gain by feature block removes the dilution problem and reverses the apparent
+ranking above:
+</p>
+
+<table class="data">
+  <thead>
+    <tr><th>Feature block</th><th>Classifier</th><th>Regressor</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Title + abstract LSA</td><td><strong>0.382</strong></td><td><strong>0.247</strong></td></tr>
+    <tr><td>Full-text LSA</td><td>0.241</td><td>0.182</td></tr>
+    <tr><td>Venue identity</td><td>0.090</td><td>0.219</td></tr>
+    <tr><td>Author history</td><td>0.102</td><td>0.091</td></tr>
+    <tr><td>Numeric metadata</td><td>0.078</td><td>0.088</td></tr>
+    <tr><td>Affiliation</td><td>0.012</td><td>0.064</td></tr>
+    <tr><td>Reference history</td><td>0.056</td><td>0.052</td></tr>
+    <tr><td>Country</td><td>0.018</td><td>0.028</td></tr>
+    <tr><td>Primary category</td><td>0.021</td><td>0.028</td></tr>
+  </tbody>
+</table>
+
+<p>
+<strong>Text is the largest block, not metadata.</strong> Title + abstract LSA plus full-text LSA
+together account for <strong>62%</strong> of classifier gain and <strong>43%</strong> of regressor
+gain&mdash;far more than any metadata block. This does not contradict the permutation table above;
+it corrects it. Per-<em>feature</em>, venue frequency is the strongest single column in the
+project; per-<em>block</em>, what a paper says outweighs where it appeared. Both statements are
+true, and reporting only the first would have misrepresented the model.
+</p>
+
+<p>
+The blocks still carry a prestige signal, and it is concentrated where it matters most for
+regression: <strong>venue identity is the second-largest regressor block at 0.219</strong>, and
+together with <code>venue_freq</code> in the numeric metadata it means venue information remains a
+major driver of predicted citation magnitude. Author history contributes a further 0.091&ndash;0.102.
+Section&nbsp;4.9 takes up what that implies.
 </p>
 
 
 <!-- ---------------- 4.8 ethics ---------------- -->
-<h3>4.8 Sustainability and ethical considerations</h3>
+<h3>4.9 Sustainability and ethical considerations</h3>
 
 <p>
 <strong>Citation counts are a biased target.</strong> They reflect venue prestige, field size,
 language, author seniority, and network effects, not merit alone. Our own feature-importance
 analysis makes this concrete rather than hypothetical: the strongest single predictor in the entire
-model is <code>venue_freq</code>. A system built on these predictions would therefore tend to
-reproduce and amplify existing prestige hierarchies&mdash;well-placed papers get surfaced, get read,
-and get cited, which is precisely the feedback loop that produced the Gini&nbsp;=&nbsp;0.73
-concentration in Figure&nbsp;1.
+project is <code>venue_freq</code>, and venue identity is the second-largest block driving the
+regressor. A system built on these predictions would therefore tend to reproduce and amplify
+existing prestige hierarchies&mdash;well-placed papers get surfaced, get read, and get cited, which
+is precisely the feedback loop that produced the Gini&nbsp;=&nbsp;0.73 concentration in
+Figure&nbsp;1.
+</p>
+
+<p>
+<strong>The best-performing features are also the most ethically loaded.</strong> This is the
+uncomfortable finding of the final stage and it deserves to be stated plainly rather than buried in
+the accuracy tables. The single largest source of new predictive signal in Section&nbsp;4.5 is
+<em>author and reference history</em>: prior author productivity, prior author impact, and prior
+high-impact rate. Adding 26 such features improved ranking (3.99&times; &rarr; 4.71&times; lift) far
+more than the 1,004 affiliation and venue-identity columns did (3.99&times; &rarr; 4.12&times;).
+A model that ranks new papers partly by <em>who wrote them</em> and <em>how well their previous
+work was cited</em> is, mechanically, a seniority and reputation model. It will systematically
+disadvantage first-time authors, career changers, researchers returning from a break, and anyone
+outside established collaboration networks&mdash;precisely the groups least served by the existing
+citation economy.
+</p>
+
+<p>
+Two mitigations follow, and we took the first. (a) We report the content-only stacks alongside the
+history stacks rather than only the best number, so the cost of dropping history is visible: base +
+full text reaches 4.12&times; lift against 4.83&times; with history. A deployment that declines to
+use author identity gives up roughly 15% of the lift, not the whole model. (b) We recommend that
+any real use of this system exclude the author-history block by default and treat it as an opt-in
+research variable, not a default feature. Section&nbsp;5 lists the debiasing ablation that would
+quantify this properly.
 </p>
 
 <p>
@@ -1030,11 +1369,18 @@ commodity hardware. Compressing TF-IDF to 100 LSA dimensions before modelling is
 it reduces the feature space by two orders of magnitude relative to the raw 13,775-term vocabulary
 and makes every downstream fit tractable on a laptop CPU. Every stage is seeded
 (<code>random_state = 42</code>), all data sources are key-free and open, and intermediate
-artifacts are cached so downstream stages need not refit upstream transformers. The most
-expensive single operation in the project was the Random Forest randomized search; we ran it once
-and reused the selected parameters for the cluster-augmented variant rather than repeating the
-search, which is also why we scoped gradient boosting out rather than launching a second large
-sweep.
+artifacts are cached so downstream stages need not refit upstream transformers.
+</p>
+
+<p>
+Two deliberate choices kept the compute cost down in the final stage. The Random Forest randomized
+search was run once and its selected parameters reused for the cluster-augmented variant rather
+than repeating the search. The XGBoost stacks use early stopping against a temporal validation
+fold instead of a full hyperparameter sweep per stack, which is what made a nine-stack ablation
+affordable at all; the OpenAlex enrichment behind the history block was likewise computed once and
+cached for every stack that needs it. The efficiency result worth carrying forward is that the
+best <em>ranker</em> in the entire project uses 323 features, not 1,327&mdash;a quarter of the
+width for equal or better performance, and correspondingly cheaper to train and serve.
 </p>
 
 </section>
@@ -1051,35 +1397,48 @@ sweep.
 
 <p>
 We built a leakage-free pipeline that predicts the citation impact of AI/ML papers from
-publication-time information only, and evaluated four models&mdash;K-Means, Ridge, Logistic
-Regression, and Random Forest&mdash;on identical temporal splits across regression, ranking, and
-classification.
+publication-time information only, and evaluated five models&mdash;K-Means, Ridge, Logistic
+Regression, Random Forest, and XGBoost&mdash;on identical temporal splits across regression,
+ranking, and classification, with a nine-way feature-stack ablation on the strongest model.
 </p>
 
 <p><strong>What we found:</strong></p>
 <ul>
   <li>
-    Publication-time features carry real signal. The best model surfaces a top-10% shortlist that is
-    <strong>4.18&times;</strong> enriched in highly cited papers and recovers <strong>41.8%</strong>
-    of them, at <strong>ROC-AUC 0.809</strong>.
+    Publication-time features carry substantial signal. The best model surfaces a top-10% shortlist
+    that is <strong>4.83&times;</strong> enriched in highly cited papers and recovers
+    <strong>48.3%</strong> of them, at <strong>ROC-AUC 0.832</strong>.
   </li>
   <li>
-    Point prediction is capped near <strong>\(R^2\approx0.14\)</strong>. Three different models
-    converge on this value, and halving the forest's training fit through regularization did not
-    move it, so the residual is noise and temporal shift rather than removable variance.
+    Point prediction reaches <strong>\(R^2 = 0.246\)</strong>, roughly <strong>74% above</strong>
+    the best midterm-era model. Three quarters of the variance remains unexplained, so the task is
+    genuinely hard&mdash;but not as hard as our own intermediate results suggested.
   </li>
   <li>
-    Nonlinearity improves <em>ordering</em>, not accuracy: Spearman \(\rho\) rises 16.6% over the
-    linear baseline while \(R^2\) is unchanged.
+    <strong>The \(R^2\approx0.14\) &ldquo;ceiling&rdquo; was an artifact of the feature set,</strong>
+    not a property of the problem. Ridge, an unconstrained forest, and a regularized forest all
+    agreed on it, and regularization moved training \(R^2\) from 0.844 to 0.500 without moving test
+    \(R^2\)&mdash;evidence that looked conclusive and was not. Changing the estimator broke it
+    (0.2015); changing the representation broke it further (0.2458).
+  </li>
+  <li>
+    <strong>Author/reference history is the largest single new source of signal,</strong> and the
+    cheapest: 26 features beat 1,004 affiliation and venue columns. It is also the most ethically
+    loaded, since it ranks papers partly by who wrote them.
+  </li>
+  <li>
+    <strong>More features are not monotonically better.</strong> The best ranker uses 323 features;
+    the 1,327-feature full stack wins only on regression and classification.
+  </li>
+  <li>
+    Block-level importance shows <strong>text outweighs metadata</strong> (62% of classifier gain),
+    even though venue frequency is the strongest single column&mdash;a distinction per-feature
+    importances alone would have hidden.
   </li>
   <li>
     Unsupervised structure is <strong>explanatory but not additive</strong>. Topic archetypes differ
-    4&times; in top-decile rate, yet adding cluster features to the supervised models changes nothing
-    measurable, because the clusters are derived from a representation the models already see.
-  </li>
-  <li>
-    <code>venue_freq</code> is the dominant predictor, ahead of reference count, author count, and
-    every individual text dimension &mdash; a result with direct ethical implications.
+    4&times; in top-decile rate, yet cluster features change no supervised metric measurably,
+    because the clusters derive from a representation the models already see.
   </li>
 </ul>
 
@@ -1087,18 +1446,18 @@ classification.
 
 <ol>
   <li>
-    <strong>Gradient boosting (XGBoost / LightGBM).</strong> The natural next model. Boosting [9]
-    corrects errors sequentially and offers finer regularization (learning rate, subsampling, L1/L2
-    penalties, depth limits) than bagging, so it is the best candidate for a better
-    bias&ndash;variance tradeoff. We scoped this out of the current report rather than report a
-    hastily tuned model; the RF randomized search consumed the compute budget we had allocated for
-    ensemble tuning.
+    <strong>A prestige-free ablation.</strong> Now the highest priority, because the accuracy story
+    and the fairness story point in opposite directions. Removing venue frequency, venue identity,
+    and author history together and re-running the full stack would quantify exactly what a
+    defensible model costs. The partial evidence we have&mdash;content-only stacks at 4.12&times;
+    against 4.83&times; with history&mdash;suggests the cost is real but modest.
   </li>
   <li>
-    <strong>Cross-cohort generalization on C2 and C3.</strong> Since our evidence points at
-    distribution shift as the binding constraint, testing a C1-trained model on 2023&ndash;2024 and
-    2025&ndash;2026 papers is the direct way to quantify it. This requires re-uploading the C2/C3
-    archives, which failed integrity checks during this project.
+    <strong>Cross-cohort generalization on C2 and C3.</strong> Every result here comes from a single
+    temporal split. Testing a C1-trained model on 2023&ndash;2024 and 2025&ndash;2026 papers is the
+    direct way to measure how fast it decays, and whether the history block&mdash;which depends on
+    accumulated author records&mdash;degrades faster than content features. This requires
+    re-uploading the C2/C3 archives, which failed integrity checks during this project.
   </li>
   <li>
     <strong>Per-archetype error analysis.</strong> We have the \(k=8\) cluster assignments and the
@@ -1108,12 +1467,12 @@ classification.
     should be presented.
   </li>
   <li>
-    <strong>Debiasing and richer representations.</strong> Given the dominance of
-    <code>venue_freq</code>, an ablation that removes prestige proxies entirely would show how much
-    predictive power survives without them&mdash;a more defensible model even at lower accuracy.
-    Beyond that, transformer text encoders (e.g. SciBERT-style embeddings, cf. [8]) and graph
-    features from citation and collaboration networks are the obvious ways to strengthen the
-    representation itself.
+    <strong>Richer text representations.</strong> Since block-level importance puts text ahead of
+    metadata, and since full text improved on abstracts alone, the representation is the lever with
+    the most demonstrated headroom. Transformer encoders (e.g. SciBERT-style embeddings, cf. [8])
+    replacing TF-IDF/LSA, and graph features from citation and collaboration networks, are the
+    natural next steps&mdash;and a graph representation may capture the useful part of author
+    history without encoding individual identity.
   </li>
 </ol>
 
@@ -1257,10 +1616,25 @@ submission.
     </tr>
 
     <tr>
-      <td class="task-name">Hyperparameter tuning &amp; cluster-augmented ablation</td>
+      <td class="task-name">Random Forest tuning &amp; cluster-augmented ablation</td>
       <td></td><td></td><td></td><td></td><td></td>
       <td><span class="gbar"><span class="seg p-jp">JP</span></span></td>
       <td><span class="gbar"><span class="seg p-jp">JP</span></span></td>
+      <td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">Supervised nonlinear model: XGBoost</td>
+      <td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+      <td></td><td></td>
+    </tr>
+
+    <tr>
+      <td class="task-name">XGBoost feature-stack ablation &amp; OpenAlex enrichment</td>
+      <td></td><td></td><td></td><td></td><td></td>
+      <td><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
+      <td><span class="gbar"><span class="seg p-hz">HZ</span></span></td>
       <td></td>
     </tr>
 
@@ -1359,9 +1733,14 @@ submission.
     <tr>
       <td>Zhang, Haoming</td>
       <td>
-        Supervised baselines carried into the final (Ridge and Logistic Regression), the shared
-        evaluation harness for regression/ranking/classification metrics used by every model, and
-        the linear-model half of the cluster-feature ablation and head-to-head comparison.
+        <strong>XGBoost feature-stack experiments (Section&nbsp;4.5):</strong> XGBoost regressor and
+        classifier with temporal-validation early stopping and F1-tuned decision thresholds; the
+        four new feature blocks (full-text LSA, affiliation/country, venue identity, and
+        leakage-safe author/reference history) including the OpenAlex enrichment pipeline behind
+        them; the nine-way block-level ablation; block-aggregated feature importance; and the
+        feature-stack summary figure. Also the supervised baselines carried into the final (Ridge
+        and Logistic Regression) and the shared regression/ranking/classification evaluation
+        harness reused by every model in this report.
       </td>
     </tr>
   </tbody>
