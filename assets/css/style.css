@@ -124,6 +124,12 @@ main { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 80px; }
 
 section { margin-bottom: 40px; }
 
+.role-list {
+  margin: 14px 0 0;
+  padding-left: 20px;
+}
+.role-list li { margin-bottom: 8px; }
+
 h2.section-title {
   color: var(--deep);
   font-size: 1.5rem;
